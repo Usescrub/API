@@ -1,0 +1,38 @@
+---
+title: Errors
+---
+
+## ❌ **Errors & Status Codes**
+
+Our API follows standard HTTP status codes to indicate the success or failure of requests.
+
+| Status Code                 | Meaning                                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | The request was successful                                                                           |
+| `201 Created`               | Resource successfully created (e.g., fraud report)                                                   |
+| `400 Bad Request`           | The request is invalid (e.g., missing or malformed data)                                             |
+| `401 Unauthorized`          | Authentication failed or missing token                                                               |
+| `403 Forbidden`             | You do not have permission to access this resource                                                   |
+| `404 Not Found`             | The requested account or resource could not be found                                                 |
+| `500 Internal Server Error` | Something went wrong on our end. This shouldn't happen, please reach out to us via our support lines |
+
+### Example Error Response
+
+```json
+{
+  "error": "Invalid BVN format"
+}
+```
+
+## 🔐 **Security**
+
+All traffic must be sent over **HTTPS**. In production, requests require an **API key** and should be protected using secure storage practices.
+
+---
+
+## 📞 **Support**
+
+Need help? Contact our support team:
+
+- Email: `support@usescrub.io`
+- Phone: +234-800-SCRUB-10

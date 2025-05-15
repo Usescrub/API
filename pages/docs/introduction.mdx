@@ -1,0 +1,42 @@
+---
+title: Welcome to Scrub
+---
+
+<Banner />
+
+This document outlines how to call Scrub's Fraud detection API.
+Scrub is your trusted gateway to real-time identity verification, transaction analysis, fraud reporting, and account risk scoring, tailored to the Nigerian financial ecosystem.
+
+Our API enables financial institutions, fintechs, and payment platforms to detect and prevent fraudulent activities with reliable, fast, and secure endpoints.
+
+### Base URL:
+
+```
+https://odoopi.usescrub.io
+```
+
+### Authentication:
+
+Currently open for testing. In production, authentication will be via API key passed in the `Authorization` header:
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+## 📈 **Rate Limits**
+
+To prevent abuse and ensure stability, we impose the following rate limits:
+
+- Free tier: 50 requests/hour
+- Enterprise tier: 10,000 requests/day
+
+Headers like `X-RateLimit-Limit` and `X-RateLimit-Remaining` will be returned to help you manage your usage.
+
+---
+
+## ✅ **Use Cases**
+
+- **Fintechs** validating users during onboarding
+- **Banks** assessing transaction legitimacy
+- **E-commerce** platforms preventing fraudulent payments
+- **Law enforcement** and regulators tracking repeat offenders

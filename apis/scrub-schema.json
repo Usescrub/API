@@ -1,0 +1,1072 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Scrub - Open API",
+    "description": "API for geolocalised fraud pattern detection and prevention in Nigeria",
+    "termsOfService": "https://usescrub.io/terms/",
+    "contact": {
+      "email": "contact@usescrub.io"
+    },
+    "license": {
+      "name": "BSD License"
+    },
+    "version": "v1"
+  },
+  "host": "odoopi.usescrub.io",
+  "schemes": ["https"],
+  "basePath": "/v1",
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "accounts",
+      "description": "User account management"
+    },
+    {
+      "name": "detect",
+      "description": "Scrub detect system"
+    },
+    {
+      "name": "verification",
+      "description": "Country based verification"
+    }
+  ],
+  "paths": {
+    "/accounts/login/": {
+      "post": {
+        "summary": "Login",
+        "operationId": "accounts_login_create",
+        "description": "Takes a set of user credentials and returns an access and refresh JSON web\ntoken pair to prove the authentication of those credentials.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VerifiedTokenObtainPair"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/VerifiedTokenObtainPairResponse"
+            }
+          }
+        },
+        "tags": ["accounts"]
+      },
+      "parameters": []
+    },
+    "/accounts/me/": {
+      "get": {
+        "operationId": "accounts_me_list",
+        "summary": "Get authenticated user ",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              }
+            }
+          }
+        },
+        "tags": ["accounts"]
+      },
+      "parameters": []
+    },
+    "/accounts/refresh/": {
+      "post": {
+        "summary": "Refresh token",
+        "operationId": "accounts_refresh_create",
+        "description": "Takes a refresh type JSON web token and returns an access type JSON web\ntoken if the refresh token is valid.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TokenRefresh"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/TokenRefresh"
+            }
+          }
+        },
+        "tags": ["accounts"]
+      },
+      "parameters": []
+    },
+    "/detect/": {
+      "post": {
+        "summary": "Detect AI generated file",
+        "operationId": "detect_real_ai_gen",
+        "description": "Takes a document in defined format and infers if real or AI generated.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["passport", "receipt", "nin"]
+                }
+              }
+            }
+          }
+        ],
+
+        "responses": {
+          "200": {
+            "description": "Successful Request",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "prediction": {
+                  "type": "string",
+                  "enum": ["real", "ai_gen"]
+                },
+                "probabilities": {
+                  "type": "object",
+                  "properties": {
+                    "ai_generated": {
+                      "type": "float"
+                    },
+                    "real": {
+                      "type": "float"
+                    }
+                  }
+                },
+                "extracted_text": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["detect"]
+      }
+    }
+  },
+
+  "/verify-bvn": {
+    "tags": ["verification"],
+    "post": {
+      "summary": "Verify a user's BVN (Bank Verification Number)",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "bvn": {
+                  "type": "string",
+                  "example": "22345678901"
+                }
+              },
+              "required": ["bvn"]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "BVN verification result",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "valid": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "example": "Adebola James"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "example": "08031234567"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Invalid BVN"
+        }
+      }
+    }
+  },
+  "/check-transaction": {
+    "post": {
+      "summary": "Analyze a transaction for potential fraud",
+      "tags": ["detect"],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "transaction_id": {
+                  "type": "string",
+                  "example": "TXN123456789"
+                },
+                "sender_account": {
+                  "type": "string",
+                  "example": "0123456789"
+                },
+                "receiver_account": {
+                  "type": "string",
+                  "example": "9876543210"
+                },
+                "amount": {
+                  "type": "number",
+                  "format": "float",
+                  "example": 125000.5
+                },
+                "channel": {
+                  "type": "string",
+                  "enum": ["mobile", "ussd", "web", "atm"],
+                  "example": "web"
+                }
+              },
+              "required": [
+                "transaction_id",
+                "sender_account",
+                "receiver_account",
+                "amount",
+                "channel"
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Transaction fraud check result",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "is_fraud": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "risk_score": {
+                    "type": "number",
+                    "example": 45.7
+                  },
+                  "remarks": {
+                    "type": "string",
+                    "example": "Transaction is low risk."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/report-fraud": {
+    "tags": ["detect"],
+    "post": {
+      "summary": "Report a confirmed fraud case",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "reporter_email": {
+                  "type": "string",
+                  "example": "report@fraudwatch.ng"
+                },
+                "account_number": {
+                  "type": "string",
+                  "example": "0123456789"
+                },
+                "fraud_type": {
+                  "type": "string",
+                  "example": "phishing"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "User tricked into sending money under false pretenses."
+                }
+              },
+              "required": ["reporter_email", "account_number", "fraud_type"]
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Fraud report submitted successfully"
+        }
+      }
+    }
+  },
+  "/fraud-score": {
+    "tags": ["detect"],
+    "get": {
+      "summary": "Get the fraud risk score for an account",
+      "parameters": [
+        {
+          "name": "account_number",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "example": "0123456789"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Fraud score result",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "account_number": {
+                    "type": "string",
+                    "example": "0123456789"
+                  },
+                  "fraud_score": {
+                    "type": "number",
+                    "example": 73.2
+                  },
+                  "risk_level": {
+                    "type": "string",
+                    "example": "high"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "Account not found"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ChangePassword": {
+      "required": ["current_password", "new_password"],
+      "type": "object",
+      "properties": {
+        "current_password": {
+          "title": "Current password",
+          "type": "string",
+          "minLength": 1
+        },
+        "new_password": {
+          "title": "New password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "VerifiedTokenObtainPair": {
+      "required": ["email", "password"],
+      "type": "object",
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "VerifiedTokenObtainPairResponse": {
+      "type": "object",
+      "properties": {
+        "access": {
+          "title": "Access",
+          "type": "string",
+          "minLength": 1
+        },
+        "refresh": {
+          "title": "Refresh",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "User": {
+      "required": ["username", "email"],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "maxLength": 150,
+          "minLength": 1
+        },
+        "email": {
+          "title": "Email address",
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        },
+        "first_name": {
+          "title": "First name",
+          "type": "string",
+          "maxLength": 150
+        },
+        "last_name": {
+          "title": "Last name",
+          "type": "string",
+          "maxLength": 150
+        },
+        "is_active": {
+          "title": "Active",
+          "description": "Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+          "type": "boolean",
+          "readOnly": true
+        },
+        "role": {
+          "title": "Role",
+          "type": "string",
+          "enum": ["A", "B"]
+        },
+        "date_joined": {
+          "title": "Date joined",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "readOnly": true
+        },
+        "phone": {
+          "title": "Phone",
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1,
+          "x-nullable": true
+        },
+        "gender": {
+          "title": "Gender",
+          "type": "string",
+          "enum": ["MALE", "FEMALE", "OTHERS"]
+        },
+        "tier": {
+          "title": "Tier",
+          "type": "integer",
+          "readOnly": true,
+          "default": 1
+        },
+        "is_verified_for_login": {
+          "title": "Is verified for login",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "TokenRefresh": {
+      "required": ["refresh"],
+      "type": "object",
+      "properties": {
+        "refresh": {
+          "title": "Refresh",
+          "type": "string",
+          "minLength": 1
+        },
+        "access": {
+          "title": "Access",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        }
+      }
+    },
+    "WithdrawalAccount": {
+      "required": ["bank_name", "account_number", "account_name"],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "bank_name": {
+          "title": "Bank name",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "account_number": {
+          "title": "Account Number",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "account_name": {
+          "title": "Account Name",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "user": {
+          "title": "User",
+          "type": "integer",
+          "readOnly": true
+        }
+      }
+    },
+    "Wallet": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "total_transactions": {
+          "title": "Total transactions",
+          "type": "string",
+          "readOnly": true
+        },
+        "total_income": {
+          "title": "Total income",
+          "type": "string",
+          "readOnly": true
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string",
+          "enum": ["USD", "NGN", "EUR", "GBP"]
+        },
+        "balance": {
+          "title": "Balance",
+          "type": "number"
+        },
+        "user": {
+          "title": "User",
+          "type": "integer",
+          "x-nullable": true
+        }
+      }
+    },
+    "ClassicContract": {
+      "required": [
+        "title",
+        "amount",
+        "description",
+        "currency",
+        "creator",
+        "creator_role",
+        "product_name",
+        "inspection_period"
+      ],
+      "type": "object",
+      "properties": {
+        "created_on": {
+          "title": "Created on",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "title": {
+          "title": "Title",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "uuid": {
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": [
+            "AGREEMENT",
+            "REJECTED",
+            "PAYMENT",
+            "DELIVERY",
+            "INSPECTION",
+            "APPEAL",
+            "COMPLETED"
+          ],
+          "readOnly": true
+        },
+        "category": {
+          "title": "Category",
+          "type": "string",
+          "readOnly": true
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string",
+          "minLength": 1
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string",
+          "enum": ["USD", "NGN", "EUR", "GBP"]
+        },
+        "creator": {
+          "title": "Creator",
+          "type": "integer"
+        },
+        "creator_role": {
+          "title": "Creator role",
+          "type": "integer",
+          "enum": [1, 2]
+        },
+        "wallet": {
+          "$ref": "#/definitions/Wallet"
+        },
+        "counterparty": {
+          "title": "Counterparty",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "product_name": {
+          "title": "Product name",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "inspection_period": {
+          "title": "Inspection period",
+          "description": "Inspection period in days - 0 indicates immediate",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": -2147483648
+        },
+        "delivery_fee": {
+          "title": "Delivery fee",
+          "type": "integer",
+          "maximum": 32767,
+          "minimum": 0
+        },
+        "status_history": {
+          "title": "Status history",
+          "type": "object"
+        }
+      }
+    },
+    "WagerContract": {
+      "required": ["title", "amount", "description", "currency", "creator"],
+      "type": "object",
+      "properties": {
+        "created_on": {
+          "title": "Created on",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "title": {
+          "title": "Title",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "uuid": {
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": ["ACCEPTED", "PROGRESS", "COMPLETED"],
+          "readOnly": true
+        },
+        "category": {
+          "title": "Category",
+          "type": "string",
+          "readOnly": true
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        },
+        "wallet": {
+          "$ref": "#/definitions/Wallet"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string",
+          "minLength": 1
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string",
+          "enum": ["USD", "NGN", "EUR", "GBP"]
+        },
+        "creator": {
+          "title": "Creator",
+          "type": "integer"
+        },
+        "counterparty": {
+          "title": "Counterparty",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "adjudicator": {
+          "title": "Adjudicator",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "status_history": {
+          "title": "Status history",
+          "type": "object"
+        }
+      }
+    },
+    "ClassicContractUpdate": {
+      "required": ["status"],
+      "type": "object",
+      "properties": {
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": [
+            "PAYMENT",
+            "AGREEMENT",
+            "REJECTED",
+            "DELIVERY",
+            "INSPECTION",
+            "ESCALATION",
+            "APPEAL"
+          ]
+        },
+        "state": {
+          "title": "State",
+          "type": "string",
+          "enum": ["end", "start"]
+        }
+      }
+    },
+    "WagerContractUpdate": {
+      "required": ["status", "state"],
+      "type": "object",
+      "properties": {
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": ["ACCEPTED", "PROGRESS", "COMPLETED"]
+        },
+        "state": {
+          "title": "State",
+          "type": "string",
+          "enum": ["end", "start"]
+        }
+      }
+    },
+    "MessageImage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "image": {
+          "title": "Image",
+          "type": "string",
+          "readOnly": true,
+          "format": "uri"
+        },
+        "image_url": {
+          "title": "Image url",
+          "type": "string",
+          "readOnly": true
+        },
+        "uploaded_at": {
+          "title": "Uploaded at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    },
+    "DisputeMessage": {
+      "required": ["message"],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "message": {
+          "title": "Message",
+          "type": "string",
+          "minLength": 1
+        },
+        "sender": {
+          "$ref": "#/definitions/User"
+        },
+        "created_at": {
+          "title": "Created at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "is_admin_message": {
+          "title": "Is admin message",
+          "type": "boolean",
+          "readOnly": true
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MessageImage"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "DisputeEvidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "image": {
+          "title": "Image",
+          "type": "string",
+          "readOnly": true,
+          "format": "uri"
+        },
+        "image_url": {
+          "title": "Image url",
+          "type": "string",
+          "readOnly": true
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "uploaded_by": {
+          "$ref": "#/definitions/User"
+        },
+        "uploaded_at": {
+          "title": "Uploaded at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    },
+    "Dispute": {
+      "required": ["contract"],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "contract": {
+          "title": "Contract",
+          "type": "integer"
+        },
+        "contract_title": {
+          "title": "Contract title",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "contract_amount": {
+          "title": "Contract amount",
+          "type": "number",
+          "readOnly": true
+        },
+        "contract_currency": {
+          "title": "Contract currency",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "initiator": {
+          "$ref": "#/definitions/User"
+        },
+        "other_party": {
+          "title": "Other party",
+          "type": "string",
+          "readOnly": true
+        },
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": ["OPEN", "IN_PROGRESS", "ESCALATED", "RESOLVED", "CLOSED"],
+          "readOnly": true
+        },
+        "created_at": {
+          "title": "Created at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updated_at": {
+          "title": "Updated at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "last_response_time": {
+          "title": "Last response time",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "x-nullable": true
+        },
+        "escalated_at": {
+          "title": "Escalated at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "x-nullable": true
+        },
+        "resolution_deadline": {
+          "title": "Resolution deadline",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "x-nullable": true
+        },
+        "admin_resolution": {
+          "title": "Admin resolution",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1,
+          "x-nullable": true
+        },
+        "admin_resolved_by": {
+          "title": "Admin resolved by",
+          "type": "integer",
+          "readOnly": true,
+          "x-nullable": true
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DisputeMessage"
+          },
+          "readOnly": true
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DisputeEvidence"
+          },
+          "readOnly": true
+        },
+        "time_remaining": {
+          "title": "Time remaining",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "DisputeCreate": {
+      "required": ["contract"],
+      "type": "object",
+      "properties": {
+        "contract": {
+          "title": "Contract",
+          "type": "integer"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string",
+          "enum": ["OPEN", "IN_PROGRESS", "ESCALATED", "RESOLVED", "CLOSED"],
+          "readOnly": true
+        }
+      }
+    },
+    "UpdateWallet": {
+      "required": ["amount", "currency", "type"],
+      "type": "object",
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string",
+          "enum": ["USD", "NGN", "EUR", "GBP"]
+        },
+        "type": {
+          "title": "Type",
+          "type": "string",
+          "enum": ["DEBIT", "CREDIT"]
+        }
+      }
+    }
+  }
+}

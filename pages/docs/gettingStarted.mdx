@@ -1,0 +1,36 @@
+---
+title: Getting started
+---
+
+## 🚀 **Getting Started**
+
+To begin using the API:
+
+1. **Sign up** at [usescrub.io](https://usescrub.io) to request an API key.
+2. Use tools like **Postman**, **Insomnia**, or your preferred HTTP client.
+3. Make POST/GET requests to the appropriate endpoint with the correct JSON payload.
+
+In the authentication request, your app will utilize the client_credentials OAuth 2.0 flow.
+Details on this flow can be found at [https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)
+Example request to `/verify-bvn`:
+
+```http
+POST /verify-bvn
+Content-Type: application/json
+
+{
+  "bvn": "22345678901"
+}
+```
+
+Expected response:
+
+```json
+{
+  "valid": true,
+  "full_name": "Adebola James",
+  "phone_number": "08031234567"
+}
+```
+
+---
