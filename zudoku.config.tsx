@@ -47,6 +47,7 @@ const config: ZudokuConfig = {
           'docs/gettingStarted',
           'docs/authentication',
         ],
+        collapsed: false,
       },
       {
         type: 'category',
@@ -56,11 +57,13 @@ const config: ZudokuConfig = {
           'docs/idempotency',
           'docs/errors',
         ],
+        collapsed: false,
       },
       {
         type: 'category',
         label: 'Resources',
         items: ['docs/support'],
+        collapsed: false,
       },
     ],
   },
