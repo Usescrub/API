@@ -1,0 +1,62 @@
+---
+title: Authentication
+---
+
+Scrub supports two authentication methods depending on your integration type.
+
+## Bearer token (JWT)
+
+For dashboard users and server-to-server integrations that manage user sessions:
+
+```http
+POST /v1/accounts/login/
+Content-Type: application/json
+
+{
+  "email": "you@company.ng",
+  "password": "your_password"
+}
+```
+
+Response:
+
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
+
+Use the access token in subsequent requests:
+
+```http
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
+```
+
+Access tokens expire after **60 minutes**. Refresh with:
+
+```http
+POST /v1/accounts/refresh/
+Content-Type: application/json
+
+{ "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..." }
+```
+
+## API key
+
+For production server integrations, use a long-lived API key from the dashboard:
+
+```http
+Authorization: Bearer sk_live_abc123...
+```
+
+API keys are scoped to your organization and can be rotated without downtime.
+
+## Request headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | `Bearer <token>` or `Bearer <api_key>` |
+| `Content-Type` | Yes (POST/PUT) | `application/json` |
+| `Idempotency-Key` | No | Unique key for safe retries on POST |
+| `X-Request-ID` | No | Your correlation ID (echoed in logs) |

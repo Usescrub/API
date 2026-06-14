@@ -1,21 +1,32 @@
 ---
-title: Getting started
+title: Getting Started
 ---
 
-## 🚀 **Getting Started**
+Follow this guide to make your first Scrub API call in under five minutes.
 
-To begin using the API:
+## Integration journey
 
-1. **Sign up** at [usescrub.io](https://usescrub.io) to request an API key.
-2. Use tools like **Postman**, **Insomnia**, or your preferred HTTP client.
-3. Make POST/GET requests to the appropriate endpoint with the correct JSON payload.
+<IntegrationTimeline />
 
-In the authentication request, your app will utilize the client_credentials OAuth 2.0 flow.
-Details on this flow can be found at [https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)
-Example request to `/verify-bvn`:
+## Quickstart — verify a BVN
+
+**1. Authenticate**
 
 ```http
-POST /verify-bvn
+POST /v1/accounts/login/
+Content-Type: application/json
+
+{
+  "email": "you@company.ng",
+  "password": "your_password"
+}
+```
+
+**2. Verify identity**
+
+```http
+POST /v1/verify-bvn/
+Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
@@ -23,14 +34,44 @@ Content-Type: application/json
 }
 ```
 
-Expected response:
+**3. Expected response**
 
 ```json
 {
   "valid": true,
   "full_name": "Adebola James",
-  "phone_number": "08031234567"
+  "phone_number": "08031234567",
+  "date_of_birth": "1990-05-15",
+  "request_id": "req_abc123"
 }
 ```
 
----
+## Quickstart — screen a transaction
+
+Send each transfer to the fraud analysis endpoint before settlement:
+
+```http
+POST /v1/fraud/analyze/
+Authorization: Bearer <access_token>
+Idempotency-Key: idem_unique_key_001
+Content-Type: application/json
+
+{
+  "transaction_id": "TXN123456789",
+  "sender_account": "0123456789",
+  "receiver_account": "9876543210",
+  "amount": 125000.50,
+  "channel": "web",
+  "ip_address": "102.89.23.45"
+}
+```
+
+<RiskMeter score={45} label="Example response risk score" />
+
+Act on the `recommended_action` field: `approve`, `review`, `decline`, or `step_up_auth`.
+
+## Next steps
+
+- [Webhooks](/docs/webhooks) — receive async fraud alerts
+- [Idempotency](/docs/idempotency) — safely retry failed requests
+- [API Reference](/api) — full endpoint documentation

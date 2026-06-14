@@ -1,4 +1,12 @@
 import type { ZudokuConfig } from 'zudoku'
+import FeatureCards from './src/components/FeatureCards'
+import IntegrationTimeline from './src/components/IntegrationTimeline'
+import WebhookFlow from './src/components/WebhookFlow'
+import IdempotencyDemo from './src/components/IdempotencyDemo'
+import ErrorCodeTable from './src/components/ErrorCodeTable'
+import SupportChannels from './src/components/SupportChannels'
+import RiskMeter from './src/components/RiskMeter'
+import ApiHostSwitcher from './src/components/ApiHostSwitcher'
 
 const config: ZudokuConfig = {
   defaults: {
@@ -33,13 +41,26 @@ const config: ZudokuConfig = {
     docs: [
       {
         type: 'category',
-        label: 'Overview',
+        label: 'Getting Started',
         items: [
           'docs/introduction',
           'docs/gettingStarted',
-          'docs/errors',
-          'docs/example',
+          'docs/authentication',
         ],
+      },
+      {
+        type: 'category',
+        label: 'Core Concepts',
+        items: [
+          'docs/webhooks',
+          'docs/idempotency',
+          'docs/errors',
+        ],
+      },
+      {
+        type: 'category',
+        label: 'Resources',
+        items: ['docs/support'],
       },
     ],
   },
@@ -51,6 +72,18 @@ const config: ZudokuConfig = {
   },
   docs: {
     files: '/pages/**/*.{md,mdx}',
+  },
+  mdx: {
+    components: {
+      FeatureCards,
+      IntegrationTimeline,
+      WebhookFlow,
+      IdempotencyDemo,
+      ErrorCodeTable,
+      SupportChannels,
+      RiskMeter,
+      ApiHostSwitcher,
+    },
   },
   theme: {
     light: {

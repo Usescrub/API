@@ -2,37 +2,39 @@
 title: Errors
 ---
 
-## ❌ **Errors & Status Codes**
+Scrub follows standard HTTP status codes. Application-level errors are identified by `error_code` and `error_type` in the response body — use these instead of HTTP status alone, similar to [Plaid's error model](https://plaid.com/docs/api/).
 
-Our API follows standard HTTP status codes to indicate the success or failure of requests.
-
-| Status Code                 | Meaning                                                                                              |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `200 OK`                    | The request was successful                                                                           |
-| `201 Created`               | Resource successfully created (e.g., fraud report)                                                   |
-| `400 Bad Request`           | The request is invalid (e.g., missing or malformed data)                                             |
-| `401 Unauthorized`          | Authentication failed or missing token                                                               |
-| `403 Forbidden`             | You do not have permission to access this resource                                                   |
-| `404 Not Found`             | The requested account or resource could not be found                                                 |
-| `500 Internal Server Error` | Something went wrong on our end. This shouldn't happen, please reach out to us via our support lines |
-
-### Example Error Response
+## Error response format
 
 ```json
 {
-  "error": "Invalid BVN format"
+  "error_code": "INVALID_BVN",
+  "error_type": "INVALID_REQUEST",
+  "message": "BVN must be exactly 11 digits",
+  "request_id": "req_8f3k2m9x1p"
 }
 ```
 
-## 🔐 **Security**
+## Error codes
 
-All traffic must be sent over **HTTPS**. In production, requests require an **API key** and should be protected using secure storage practices.
+<ErrorCodeTable />
 
----
+## HTTP status reference
 
-## 📞 **Support**
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Request succeeded |
+| `201 Created` | Resource created (fraud report, inquiry) |
+| `202 Accepted` | Async operation started (credit report) |
+| `400 Bad Request` | Malformed or invalid input |
+| `401 Unauthorized` | Missing or invalid authentication |
+| `403 Forbidden` | Consent missing or insufficient permissions |
+| `404 Not Found` | Account, report, or resource not found |
+| `409 Conflict` | Idempotency key reused with different payload |
+| `422 Unprocessable Entity` | Valid JSON but insufficient data for analysis |
+| `429 Too Many Requests` | Rate limit exceeded |
+| `500 Internal Server Error` | Server error — contact support with `request_id` |
 
-Need help? Contact our support team:
+## Security
 
-- Email: `support@usescrub.io`
-- Phone: +234-800-SCRUB-10
+All traffic must use **HTTPS** (TLS 1.2+). Store API keys and webhook secrets securely. Never expose tokens on the client side.

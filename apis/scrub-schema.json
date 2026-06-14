@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "Scrub - Open API",
-    "description": "API for geolocalised fraud pattern detection and prevention in Nigeria",
+    "description": "Comprehensive API for geolocalised fraud detection, identity verification, and credit reporting in Nigeria. All responses include a request_id for support tracing.",
     "termsOfService": "https://usescrub.io/terms/",
     "contact": {
       "email": "contact@usescrub.io"
@@ -40,7 +40,15 @@
     },
     {
       "name": "verification",
-      "description": "Country based verification"
+      "description": "Country based identity verification (BVN, NIN, phone)"
+    },
+    {
+      "name": "fraud",
+      "description": "Real-time fraud detection, scoring, and watchlist screening"
+    },
+    {
+      "name": "credit",
+      "description": "Credit scoring, reporting, and bureau inquiry for Nigerian consumers"
     }
   ],
   "paths": {
@@ -159,10 +167,12 @@
                   "type": "object",
                   "properties": {
                     "ai_generated": {
-                      "type": "float"
+                      "type": "number",
+                      "format": "float"
                     },
                     "real": {
-                      "type": "float"
+                      "type": "number",
+                      "format": "float"
                     }
                   }
                 },
@@ -176,221 +186,802 @@
         },
         "tags": ["detect"]
       }
-    }
-  },
-
-  "/verify-bvn": {
-    "tags": ["verification"],
-    "post": {
-      "summary": "Verify a user's BVN (Bank Verification Number)",
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
+    },
+    "/verify-bvn/": {
+      "post": {
+        "summary": "Verify BVN",
+        "operationId": "verification_bvn_create",
+        "description": "Validates a Bank Verification Number (BVN) against NIBSS records and returns masked identity attributes. Use during KYC onboarding to confirm a customer's identity before account creation.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "bvn": {
-                  "type": "string",
-                  "example": "22345678901"
-                }
-              },
-              "required": ["bvn"]
+              "$ref": "#/definitions/BvnVerifyRequest"
             }
           }
-        }
-      },
-      "responses": {
-        "200": {
-          "description": "BVN verification result",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "valid": {
-                    "type": "boolean",
-                    "example": true
-                  },
-                  "full_name": {
-                    "type": "string",
-                    "example": "Adebola James"
-                  },
-                  "phone_number": {
-                    "type": "string",
-                    "example": "08031234567"
-                  }
-                }
-              }
+        ],
+        "responses": {
+          "200": {
+            "description": "BVN verification result",
+            "schema": {
+              "$ref": "#/definitions/BvnVerifyResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid BVN format or checksum failure",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
             }
           }
         },
-        "400": {
-          "description": "Invalid BVN"
-        }
+        "tags": ["verification"]
       }
-    }
-  },
-  "/check-transaction": {
-    "post": {
-      "summary": "Analyze a transaction for potential fraud",
-      "tags": ["detect"],
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
+    },
+    "/verify-nin/": {
+      "post": {
+        "summary": "Verify NIN",
+        "operationId": "verification_nin_create",
+        "description": "Validates a National Identification Number (NIN) via NIMC and returns verified identity fields. Recommended for tier-2 KYC and regulatory compliance.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "transaction_id": {
-                  "type": "string",
-                  "example": "TXN123456789"
-                },
-                "sender_account": {
-                  "type": "string",
-                  "example": "0123456789"
-                },
-                "receiver_account": {
-                  "type": "string",
-                  "example": "9876543210"
-                },
-                "amount": {
-                  "type": "number",
-                  "format": "float",
-                  "example": 125000.5
-                },
-                "channel": {
-                  "type": "string",
-                  "enum": ["mobile", "ussd", "web", "atm"],
-                  "example": "web"
-                }
-              },
-              "required": [
-                "transaction_id",
-                "sender_account",
-                "receiver_account",
-                "amount",
-                "channel"
-              ]
+              "$ref": "#/definitions/NinVerifyRequest"
             }
           }
-        }
-      },
-      "responses": {
-        "200": {
-          "description": "Transaction fraud check result",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "is_fraud": {
-                    "type": "boolean",
-                    "example": false
-                  },
-                  "risk_score": {
-                    "type": "number",
-                    "example": 45.7
-                  },
-                  "remarks": {
-                    "type": "string",
-                    "example": "Transaction is low risk."
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "/report-fraud": {
-    "tags": ["detect"],
-    "post": {
-      "summary": "Report a confirmed fraud case",
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
+        ],
+        "responses": {
+          "200": {
+            "description": "NIN verification result",
             "schema": {
-              "type": "object",
-              "properties": {
-                "reporter_email": {
-                  "type": "string",
-                  "example": "report@fraudwatch.ng"
-                },
-                "account_number": {
-                  "type": "string",
-                  "example": "0123456789"
-                },
-                "fraud_type": {
-                  "type": "string",
-                  "example": "phishing"
-                },
-                "description": {
-                  "type": "string",
-                  "example": "User tricked into sending money under false pretenses."
-                }
-              },
-              "required": ["reporter_email", "account_number", "fraud_type"]
+              "$ref": "#/definitions/NinVerifyResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid NIN",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
             }
           }
-        }
-      },
-      "responses": {
-        "201": {
-          "description": "Fraud report submitted successfully"
-        }
+        },
+        "tags": ["verification"]
       }
-    }
-  },
-  "/fraud-score": {
-    "tags": ["detect"],
-    "get": {
-      "summary": "Get the fraud risk score for an account",
-      "parameters": [
-        {
-          "name": "account_number",
-          "in": "query",
-          "required": true,
-          "schema": {
+    },
+    "/fraud/analyze/": {
+      "post": {
+        "summary": "Analyze transaction for fraud",
+        "operationId": "fraud_analyze_create",
+        "description": "Runs real-time fraud analysis on a transaction using geolocation signals, velocity checks, device fingerprinting, and network graph analysis. Returns a risk score (0–100) and recommended action.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
             "type": "string",
-            "example": "0123456789"
+            "description": "Unique key to safely retry this request without duplicate analysis"
+          },
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FraudAnalyzeRequest"
+            }
           }
-        }
-      ],
-      "responses": {
-        "200": {
-          "description": "Fraud score result",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "account_number": {
-                    "type": "string",
-                    "example": "0123456789"
-                  },
-                  "fraud_score": {
-                    "type": "number",
-                    "example": 73.2
-                  },
-                  "risk_level": {
-                    "type": "string",
-                    "example": "high"
-                  }
-                }
-              }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fraud analysis result",
+            "schema": {
+              "$ref": "#/definitions/FraudAnalyzeResponse"
+            }
+          },
+          "422": {
+            "description": "Insufficient data for analysis",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
             }
           }
         },
-        "404": {
-          "description": "Account not found"
-        }
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/score/": {
+      "get": {
+        "summary": "Get account fraud score",
+        "operationId": "fraud_score_retrieve",
+        "description": "Retrieves the current aggregated fraud risk score for a bank account or wallet. Scores are recalculated when new signals arrive via webhooks or API calls.",
+        "parameters": [
+          {
+            "name": "account_number",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": "10-digit NUBAN account number"
+          },
+          {
+            "name": "bank_code",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "CBN bank code (e.g. 058 for GTBank)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fraud score result",
+            "schema": {
+              "$ref": "#/definitions/FraudScoreResponse"
+            }
+          },
+          "404": {
+            "description": "Account not found in Scrub network",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/watchlist/check/": {
+      "post": {
+        "summary": "Screen against watchlists",
+        "operationId": "fraud_watchlist_check",
+        "description": "Screens an identity or account against Scrub's consolidated watchlist including reported fraudsters, PEP lists, and sanctioned entities relevant to the Nigerian financial ecosystem.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WatchlistCheckRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watchlist screening result",
+            "schema": {
+              "$ref": "#/definitions/WatchlistCheckResponse"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/device-fingerprint/": {
+      "post": {
+        "summary": "Assess device fingerprint risk",
+        "operationId": "fraud_device_fingerprint_create",
+        "description": "Evaluates device fingerprint signals (IP, user agent, timezone, emulator detection) to detect account takeover, SIM swap, and multi-accounting patterns common in Nigerian mobile fraud.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeviceFingerprintRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device risk assessment",
+            "schema": {
+              "$ref": "#/definitions/DeviceFingerprintResponse"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/velocity-check/": {
+      "post": {
+        "summary": "Check transaction velocity",
+        "operationId": "fraud_velocity_check_create",
+        "description": "Detects abnormal transaction velocity — rapid transfers, burst login attempts, or geographic impossibility — within a configurable time window.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VelocityCheckRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Velocity check result",
+            "schema": {
+              "$ref": "#/definitions/VelocityCheckResponse"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/report/": {
+      "post": {
+        "summary": "Report confirmed fraud",
+        "operationId": "fraud_report_create",
+        "description": "Submits a confirmed fraud case to the Scrub network. Reports are shared (with consent) across participating institutions to improve collective fraud detection.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FraudReportRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Fraud report submitted",
+            "schema": {
+              "$ref": "#/definitions/FraudReportResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid report payload",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/fraud/alerts/": {
+      "get": {
+        "summary": "List fraud alerts",
+        "operationId": "fraud_alerts_list",
+        "description": "Returns paginated fraud alerts for accounts linked to your organization. Alerts are also delivered asynchronously via webhooks.",
+        "parameters": [
+          {
+            "name": "account_number",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "default": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated fraud alerts",
+            "schema": {
+              "$ref": "#/definitions/FraudAlertsResponse"
+            }
+          }
+        },
+        "tags": ["fraud"]
+      }
+    },
+    "/credit/score/": {
+      "post": {
+        "summary": "Get credit score",
+        "operationId": "credit_score_create",
+        "description": "Retrieves a consumer credit score (300–850) based on repayment history, credit utilization, and bureau data from CRC Credit Bureau and FirstCentral. Requires explicit customer consent.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreditScoreRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credit score result",
+            "schema": {
+              "$ref": "#/definitions/CreditScoreResponse"
+            }
+          },
+          "403": {
+            "description": "Customer consent not provided",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": ["credit"]
+      }
+    },
+    "/credit/report/": {
+      "post": {
+        "summary": "Generate credit report",
+        "operationId": "credit_report_create",
+        "description": "Generates a comprehensive credit report including score, active loans, repayment history, and delinquencies. Reports are available for retrieval for 30 days.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreditReportRequest"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Report generation initiated",
+            "schema": {
+              "$ref": "#/definitions/CreditReportInitResponse"
+            }
+          }
+        },
+        "tags": ["credit"]
+      }
+    },
+    "/credit/report/{report_id}/": {
+      "get": {
+        "summary": "Retrieve credit report",
+        "operationId": "credit_report_retrieve",
+        "description": "Fetches a previously generated credit report by ID. Poll this endpoint after receiving a `credit.report.ready` webhook event.",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Report ID returned from POST /credit/report/"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full credit report",
+            "schema": {
+              "$ref": "#/definitions/CreditReport"
+            }
+          },
+          "404": {
+            "description": "Report not found or expired",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": ["credit"]
+      }
+    },
+    "/credit/inquiry/": {
+      "post": {
+        "summary": "Submit credit inquiry",
+        "operationId": "credit_inquiry_create",
+        "description": "Submits a soft or hard credit inquiry to Nigerian credit bureaus. Soft inquiries do not affect the consumer's score; hard inquiries are recorded on the bureau file.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreditInquiryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inquiry result",
+            "schema": {
+              "$ref": "#/definitions/CreditInquiryResponse"
+            }
+          }
+        },
+        "tags": ["credit"]
+      }
+    },
+    "/credit/history/": {
+      "get": {
+        "summary": "Get repayment history",
+        "operationId": "credit_history_list",
+        "description": "Returns summarized loan and repayment history for a consumer, including active facilities, closed accounts, and delinquency flags.",
+        "parameters": [
+          {
+            "name": "bvn",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": "11-digit BVN"
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "default": 24,
+            "description": "Lookback period in months (max 60)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repayment history summary",
+            "schema": {
+              "$ref": "#/definitions/CreditHistoryResponse"
+            }
+          }
+        },
+        "tags": ["credit"]
       }
     }
   },
   "definitions": {
+    "ApiError": {
+      "type": "object",
+      "properties": {
+        "error_code": {
+          "type": "string",
+          "description": "Machine-readable error identifier",
+          "example": "INVALID_BVN"
+        },
+        "error_type": {
+          "type": "string",
+          "enum": ["INVALID_REQUEST", "AUTHENTICATION", "NOT_FOUND", "RATE_LIMIT", "INTERNAL"],
+          "example": "INVALID_REQUEST"
+        },
+        "message": {
+          "type": "string",
+          "example": "BVN must be exactly 11 digits"
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Include when contacting support",
+          "example": "req_8f3k2m9x1p"
+        }
+      }
+    },
+    "BvnVerifyRequest": {
+      "required": ["bvn"],
+      "type": "object",
+      "properties": {
+        "bvn": {
+          "type": "string",
+          "description": "11-digit Bank Verification Number",
+          "example": "22345678901"
+        }
+      }
+    },
+    "BvnVerifyResponse": {
+      "type": "object",
+      "properties": {
+        "valid": { "type": "boolean", "example": true },
+        "full_name": { "type": "string", "example": "Adebola James" },
+        "phone_number": { "type": "string", "example": "08031234567" },
+        "date_of_birth": { "type": "string", "format": "date", "example": "1990-05-15" },
+        "request_id": { "type": "string", "example": "req_abc123" }
+      }
+    },
+    "NinVerifyRequest": {
+      "required": ["nin"],
+      "type": "object",
+      "properties": {
+        "nin": {
+          "type": "string",
+          "description": "11-digit National Identification Number",
+          "example": "12345678901"
+        }
+      }
+    },
+    "NinVerifyResponse": {
+      "type": "object",
+      "properties": {
+        "valid": { "type": "boolean", "example": true },
+        "full_name": { "type": "string", "example": "Chioma Okonkwo" },
+        "gender": { "type": "string", "enum": ["M", "F"], "example": "F" },
+        "request_id": { "type": "string" }
+      }
+    },
+    "FraudAnalyzeRequest": {
+      "required": ["transaction_id", "sender_account", "receiver_account", "amount", "channel"],
+      "type": "object",
+      "properties": {
+        "transaction_id": { "type": "string", "example": "TXN123456789" },
+        "sender_account": { "type": "string", "example": "0123456789" },
+        "receiver_account": { "type": "string", "example": "9876543210" },
+        "amount": { "type": "number", "format": "float", "example": 125000.5 },
+        "currency": { "type": "string", "enum": ["NGN", "USD"], "default": "NGN" },
+        "channel": { "type": "string", "enum": ["mobile", "ussd", "web", "atm", "pos"], "example": "web" },
+        "ip_address": { "type": "string", "example": "102.89.23.45" },
+        "device_id": { "type": "string", "example": "dev_fingerprint_abc" },
+        "metadata": { "type": "object", "description": "Optional key-value context" }
+      }
+    },
+    "FraudAnalyzeResponse": {
+      "type": "object",
+      "properties": {
+        "transaction_id": { "type": "string" },
+        "is_fraud": { "type": "boolean", "example": false },
+        "risk_score": { "type": "number", "description": "0 (safe) to 100 (high risk)", "example": 45.7 },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "medium" },
+        "recommended_action": { "type": "string", "enum": ["approve", "review", "decline", "step_up_auth"], "example": "approve" },
+        "signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "example": "VELOCITY_SPIKE" },
+              "weight": { "type": "number", "example": 0.35 },
+              "description": { "type": "string", "example": "3 transfers in 5 minutes" }
+            }
+          }
+        },
+        "request_id": { "type": "string" }
+      }
+    },
+    "FraudScoreResponse": {
+      "type": "object",
+      "properties": {
+        "account_number": { "type": "string", "example": "0123456789" },
+        "fraud_score": { "type": "number", "example": 73.2 },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "high" },
+        "last_updated": { "type": "string", "format": "date-time" },
+        "report_count": { "type": "integer", "description": "Number of network fraud reports", "example": 2 }
+      }
+    },
+    "WatchlistCheckRequest": {
+      "required": ["subject_type", "identifier"],
+      "type": "object",
+      "properties": {
+        "subject_type": { "type": "string", "enum": ["account", "bvn", "nin", "phone", "email"], "example": "bvn" },
+        "identifier": { "type": "string", "example": "22345678901" },
+        "full_name": { "type": "string", "example": "Adebola James" }
+      }
+    },
+    "WatchlistCheckResponse": {
+      "type": "object",
+      "properties": {
+        "matched": { "type": "boolean", "example": false },
+        "match_count": { "type": "integer", "example": 0 },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "list_name": { "type": "string", "example": "scrub_fraud_network" },
+              "match_score": { "type": "number", "example": 0.92 },
+              "reason": { "type": "string", "example": "Reported phishing — Jan 2025" }
+            }
+          }
+        },
+        "request_id": { "type": "string" }
+      }
+    },
+    "DeviceFingerprintRequest": {
+      "required": ["device_id", "ip_address", "user_agent"],
+      "type": "object",
+      "properties": {
+        "device_id": { "type": "string", "example": "dev_abc123" },
+        "ip_address": { "type": "string", "example": "102.89.23.45" },
+        "user_agent": { "type": "string", "example": "Mozilla/5.0 (Linux; Android 14)..." },
+        "account_number": { "type": "string", "example": "0123456789" },
+        "timezone": { "type": "string", "example": "Africa/Lagos" },
+        "is_emulator": { "type": "boolean", "example": false }
+      }
+    },
+    "DeviceFingerprintResponse": {
+      "type": "object",
+      "properties": {
+        "device_id": { "type": "string" },
+        "risk_score": { "type": "number", "example": 62.0 },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high"], "example": "medium" },
+        "flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "example": ["NEW_DEVICE", "VPN_DETECTED"]
+        },
+        "known_device": { "type": "boolean", "example": false },
+        "request_id": { "type": "string" }
+      }
+    },
+    "VelocityCheckRequest": {
+      "required": ["account_number", "event_type"],
+      "type": "object",
+      "properties": {
+        "account_number": { "type": "string", "example": "0123456789" },
+        "event_type": { "type": "string", "enum": ["transfer", "login", "card_txn", "bvn_lookup"], "example": "transfer" },
+        "window_minutes": { "type": "integer", "default": 60, "example": 60 },
+        "threshold": { "type": "integer", "default": 5, "description": "Max events before flagging", "example": 5 }
+      }
+    },
+    "VelocityCheckResponse": {
+      "type": "object",
+      "properties": {
+        "exceeded": { "type": "boolean", "example": false },
+        "event_count": { "type": "integer", "example": 2 },
+        "threshold": { "type": "integer", "example": 5 },
+        "window_minutes": { "type": "integer", "example": 60 },
+        "request_id": { "type": "string" }
+      }
+    },
+    "FraudReportRequest": {
+      "required": ["reporter_email", "account_number", "fraud_type"],
+      "type": "object",
+      "properties": {
+        "reporter_email": { "type": "string", "format": "email", "example": "report@fraudwatch.ng" },
+        "account_number": { "type": "string", "example": "0123456789" },
+        "fraud_type": {
+          "type": "string",
+          "enum": ["phishing", "account_takeover", "sim_swap", "identity_theft", "chargeback", "other"],
+          "example": "phishing"
+        },
+        "amount_lost": { "type": "number", "example": 50000 },
+        "description": { "type": "string", "example": "User tricked into sending money under false pretenses." },
+        "evidence_urls": { "type": "array", "items": { "type": "string", "format": "uri" } }
+      }
+    },
+    "FraudReportResponse": {
+      "type": "object",
+      "properties": {
+        "report_id": { "type": "string", "example": "frd_rpt_8x2k9m" },
+        "status": { "type": "string", "enum": ["received", "under_review", "verified"], "example": "received" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "request_id": { "type": "string" }
+      }
+    },
+    "FraudAlertsResponse": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer", "example": 42 },
+        "page": { "type": "integer", "example": 1 },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "alert_id": { "type": "string", "example": "alt_9k2m1x" },
+              "account_number": { "type": "string" },
+              "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "type": { "type": "string", "example": "VELOCITY_BREACH" },
+              "message": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "CreditScoreRequest": {
+      "required": ["bvn", "consent_reference"],
+      "type": "object",
+      "properties": {
+        "bvn": { "type": "string", "example": "22345678901" },
+        "consent_reference": { "type": "string", "description": "Reference to stored customer consent", "example": "cns_abc123" },
+        "bureau": { "type": "string", "enum": ["crc", "firstcentral", "all"], "default": "all" }
+      }
+    },
+    "CreditScoreResponse": {
+      "type": "object",
+      "properties": {
+        "bvn": { "type": "string" },
+        "score": { "type": "integer", "description": "300–850 scale", "example": 682 },
+        "rating": { "type": "string", "enum": ["excellent", "good", "fair", "poor", "very_poor"], "example": "good" },
+        "bureau_source": { "type": "string", "example": "crc" },
+        "factors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "factor": { "type": "string", "example": "repayment_history" },
+              "impact": { "type": "string", "enum": ["positive", "negative", "neutral"] },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "request_id": { "type": "string" }
+      }
+    },
+    "CreditReportRequest": {
+      "required": ["bvn", "consent_reference"],
+      "type": "object",
+      "properties": {
+        "bvn": { "type": "string", "example": "22345678901" },
+        "consent_reference": { "type": "string", "example": "cns_abc123" },
+        "include_loans": { "type": "boolean", "default": true },
+        "include_inquiries": { "type": "boolean", "default": true }
+      }
+    },
+    "CreditReportInitResponse": {
+      "type": "object",
+      "properties": {
+        "report_id": { "type": "string", "example": "crp_8f3k2m9x" },
+        "status": { "type": "string", "enum": ["pending", "processing"], "example": "processing" },
+        "estimated_ready_at": { "type": "string", "format": "date-time" },
+        "request_id": { "type": "string" }
+      }
+    },
+    "CreditReport": {
+      "type": "object",
+      "properties": {
+        "report_id": { "type": "string" },
+        "bvn": { "type": "string" },
+        "score": { "type": "integer", "example": 682 },
+        "rating": { "type": "string", "example": "good" },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "active_loans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lender": { "type": "string", "example": "FairMoney" },
+              "amount": { "type": "number", "example": 150000 },
+              "outstanding": { "type": "number", "example": 45000 },
+              "status": { "type": "string", "enum": ["current", "delinquent", "closed"] }
+            }
+          }
+        },
+        "inquiries_last_12m": { "type": "integer", "example": 3 },
+        "delinquencies": { "type": "integer", "example": 0 }
+      }
+    },
+    "CreditInquiryRequest": {
+      "required": ["bvn", "inquiry_type", "consent_reference", "purpose"],
+      "type": "object",
+      "properties": {
+        "bvn": { "type": "string", "example": "22345678901" },
+        "inquiry_type": { "type": "string", "enum": ["soft", "hard"], "example": "soft" },
+        "consent_reference": { "type": "string", "example": "cns_abc123" },
+        "purpose": { "type": "string", "enum": ["loan_application", "account_opening", "periodic_review"], "example": "loan_application" }
+      }
+    },
+    "CreditInquiryResponse": {
+      "type": "object",
+      "properties": {
+        "inquiry_id": { "type": "string", "example": "inq_7k2m9x" },
+        "inquiry_type": { "type": "string", "example": "soft" },
+        "recorded_on_bureau": { "type": "boolean", "example": false },
+        "score_at_inquiry": { "type": "integer", "example": 682 },
+        "request_id": { "type": "string" }
+      }
+    },
+    "CreditHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "bvn": { "type": "string" },
+        "months_analyzed": { "type": "integer", "example": 24 },
+        "total_facilities": { "type": "integer", "example": 4 },
+        "active_facilities": { "type": "integer", "example": 2 },
+        "on_time_payments_pct": { "type": "number", "example": 94.5 },
+        "worst_delinquency_days": { "type": "integer", "example": 0 },
+        "facilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lender": { "type": "string" },
+              "type": { "type": "string", "enum": ["personal_loan", "mortgage", "credit_card", "overdraft"] },
+              "opened_at": { "type": "string", "format": "date" },
+              "status": { "type": "string", "enum": ["current", "delinquent", "closed"] }
+            }
+          }
+        },
+        "request_id": { "type": "string" }
+      }
+    },
     "ChangePassword": {
       "required": ["current_password", "new_password"],
       "type": "object",

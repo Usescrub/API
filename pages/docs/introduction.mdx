@@ -1,40 +1,43 @@
 ---
-title: Welcome to Scrub
+title: Introduction
 ---
 
-This document outlines how to call Scrub's Fraud detection API.
-Scrub is your trusted gateway to real-time identity verification, transaction analysis, fraud reporting, and account risk scoring, tailored to the Nigerian financial ecosystem.
+Scrub is your gateway to real-time identity verification, transaction fraud analysis, credit reporting, and account risk scoring — built for the Nigerian financial ecosystem.
 
-Our API enables financial institutions, fintechs, and payment platforms to detect and prevent fraudulent activities with reliable, fast, and secure endpoints.
+Our API helps fintechs, banks, and payment platforms detect and prevent fraud with reliable, fast, and secure endpoints.
 
-### Base URL:
+<FeatureCards />
 
-```
-https://odoopi.usescrub.io
-```
+## API host
 
-### Authentication:
+All requests are JSON over HTTPS. Scrub serves two environments — items cannot be moved between them.
 
-Currently open for testing. In production, authentication will be via API key passed in the `Authorization` header:
+<ApiHostSwitcher />
+
+## Authentication
+
+Include your API key or JWT access token in every request:
 
 ```http
 Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
 ```
 
-## 📈 **Rate Limits**
+Every response includes a `request_id`. Include it when contacting support — similar to [Plaid's request tracing](https://plaid.com/docs/api/).
 
-To prevent abuse and ensure stability, we impose the following rate limits:
+## Rate limits
 
-- Free tier: 50 requests/hour
-- Enterprise tier: 10,000 requests/day
+| Tier | Limit |
+|------|-------|
+| Sandbox | 100 requests/hour |
+| Production (Free) | 50 requests/hour |
+| Enterprise | 10,000 requests/day |
 
-Headers like `X-RateLimit-Limit` and `X-RateLimit-Remaining` will be returned to help you manage your usage.
+Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 
----
+## Use cases
 
-## ✅ **Use Cases**
-
-- **Fintechs** validating users during onboarding
-- **Banks** assessing transaction legitimacy
-- **E-commerce** platforms preventing fraudulent payments
-- **Law enforcement** and regulators tracking repeat offenders
+- **Fintechs** — KYC during onboarding, loan underwriting with credit scores
+- **Banks** — Real-time transaction screening and watchlist checks
+- **E-commerce** — Device fingerprinting and velocity checks at checkout
+- **Regulators** — Network-wide fraud reporting and pattern matching

@@ -1,0 +1,68 @@
+---
+title: Webhooks
+---
+
+Scrub delivers asynchronous events to your server via HTTPS POST. Register webhook URLs in the [Scrub Dashboard](https://usescrub.io) under **Developers → Webhooks**.
+
+<WebhookFlow />
+
+## Event delivery
+
+1. Scrub POSTs a JSON payload to your registered URL
+2. Your server validates the signature and returns `200 OK` within **5 seconds**
+3. If delivery fails, Scrub retries with exponential backoff (up to 72 hours)
+
+## Signature verification
+
+Every webhook includes an `X-Scrub-Signature` header — an HMAC-SHA256 of the raw body using your webhook secret:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(`sha256=${expected}`)
+  );
+}
+```
+
+## Event types
+
+| Event | Description |
+|-------|-------------|
+| `fraud.alert` | High-risk transaction or velocity breach detected |
+| `fraud.score.updated` | Account fraud score changed beyond threshold |
+| `fraud.report.verified` | A submitted fraud report was verified by Scrub |
+| `credit.report.ready` | Async credit report generation completed |
+| `credit.score.changed` | Consumer credit score shifted significantly |
+| `verification.completed` | BVN or NIN verification finished |
+
+## Example payload
+
+```json
+{
+  "event": "fraud.alert",
+  "created_at": "2025-06-14T10:23:00Z",
+  "data": {
+    "alert_id": "alt_9k2m1x",
+    "account_number": "0123456789",
+    "severity": "high",
+    "type": "VELOCITY_BREACH",
+    "risk_score": 78.4,
+    "message": "5 transfers in 10 minutes from new device"
+  },
+  "request_id": "req_wh_8f3k2m"
+}
+```
+
+## Best practices
+
+- Return `200` quickly — process the event asynchronously in a job queue
+- Use `event` + `data.alert_id` (or equivalent ID) for deduplication
+- Rotate webhook secrets periodically from the dashboard
+- Whitelist Scrub IP ranges in production (available in dashboard)
