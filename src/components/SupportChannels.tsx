@@ -8,7 +8,7 @@ const channels = [
   },
   {
     icon: '💬',
-    title: 'Slack Connect',
+    title: 'WhatsApp Connect',
     detail: 'Enterprise customers',
     sub: 'Dedicated channel with engineering support',
     href: 'https://usescrub.io/contact',

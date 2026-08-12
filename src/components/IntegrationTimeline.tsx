@@ -2,27 +2,32 @@ const steps = [
   {
     step: 1,
     title: 'Create an account',
-    detail: 'Sign up at usescrub.io and request sandbox API credentials from the dashboard.',
+    detail:
+      'Sign up at detect.usescrub.io and verify your email to activate your organisation account.',
   },
   {
     step: 2,
     title: 'Authenticate',
-    detail: 'Obtain a Bearer token via POST /accounts/login/ or use your API key in the Authorization header.',
+    detail:
+      'Log in for a dashboard session, or create an API key in Token Management for server-to-server calls.',
   },
   {
     step: 3,
-    title: 'Verify a customer',
-    detail: 'Call POST /verify-bvn/ or POST /verify-nin/ during onboarding to confirm identity.',
+    title: 'Configure webhooks',
+    detail:
+      'In Settings → Controls, set your webhook URL and signing secret to receive report.ready and report.failed events.',
   },
   {
     step: 4,
-    title: 'Screen transactions',
-    detail: 'Send each transfer to POST /fraud/analyze/ and act on the recommended_action field.',
+    title: 'Detect documents',
+    detail:
+      'Call POST /api/v1/detect/file with Bearer auth to screen uploaded images for AI / manipulation signals.',
   },
   {
     step: 5,
-    title: 'Subscribe to webhooks',
-    detail: 'Register your endpoint in the dashboard to receive fraud.alert and credit.report.ready events.',
+    title: 'Run financial reports',
+    detail:
+      'Call POST /api/v1/report, embed link_url on your frontend for bank connection, then receive the scored report via webhook or poll.',
   },
 ]
 

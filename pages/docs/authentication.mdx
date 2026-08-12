@@ -2,11 +2,20 @@
 title: Authentication
 ---
 
-Scrub supports two authentication methods depending on your integration type.
+Scrub uses Bearer auth for every protected request. There are two ways to get a token.
 
-## Bearer token (JWT)
+## Auth flow
 
-For dashboard users and session-based integrations:
+1. **Sign up** — create an account and verify your email.
+2. **Log in** — exchange credentials for a short-lived access token (and a refresh token).
+3. **Call the API** — send `Authorization: Bearer <token>` on each request.
+4. **Refresh** — when the access token expires, use the refresh token to get a new one without logging in again.
+
+For server integrations, skip the login loop: create an **API key** in Token Management and use that Bearer token from your backend.
+
+## JWT (dashboard / interactive)
+
+Use this for the Scrub dashboard and any session-based client.
 
 ```http
 POST /api/v1/auth/login
@@ -18,45 +27,30 @@ Content-Type: application/json
 }
 ```
 
-Response:
-
-```json
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "token_type": "bearer",
-  "user": {
-    "id": 1,
-    "email": "you@company.ng",
-    "username": "you"
-  }
-}
-```
-
-Use the access token in subsequent requests:
+Attach the returned access token:
 
 ```http
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
+Authorization: Bearer <access_token>
 ```
 
-Access tokens expire after **30 minutes**. Refresh with:
+When it expires, refresh:
 
 ```http
 POST /api/v1/auth/refresh
 Content-Type: application/json
 
-{ "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc..." }
+{ "refresh_token": "<refresh_token>" }
 ```
 
-## API key
+## API key (server-to-server)
 
-For production server integrations, create a Bearer API key in the dashboard (Token Management):
+Use this for Detect, Financial Report, and other programmatic calls from your backend.
 
-```http
-Authorization: Bearer <api_token>
-```
+1. Sign in to the dashboard
+2. Open **Token Management** and create a key
+3. Send it as `Authorization: Bearer <api_token>`
 
-API keys authenticate programmatic access to Detect and Financial Report endpoints. JWT is for the dashboard UI only.
+Do not embed API keys in frontend code.
 
 ## Request headers
 
@@ -65,4 +59,6 @@ API keys authenticate programmatic access to Detect and Financial Report endpoin
 | `Authorization` | Yes | `Bearer <jwt>` or `Bearer <api_token>` |
 | `Content-Type` | Yes (JSON POST/PUT) | `application/json` |
 | `Idempotency-Key` | No | Unique key for safe retries on POST |
-| `X-Request-ID` | No | Your correlation ID (echoed in logs) |
+| `X-Request-ID` | No | Your correlation ID |
+
+Next: [Getting Started](/docs/gettingStarted) · [Webhooks](/docs/webhooks)
