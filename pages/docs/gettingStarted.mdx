@@ -45,6 +45,14 @@ file=@document.png
 
 ## Quickstart — start a financial report
 
+Create a case, embed the bank-connection link on your frontend, then receive the scored report via webhook (or poll for status).
+
+### 1. Configure your webhook (once)
+
+In the dashboard under **Settings → Controls**, set a webhook URL and copy the signing secret. Scrub will POST signed events to that URL when the report is ready or fails. See [Webhooks](/docs/webhooks) for signature verification and retries.
+
+### 2. Create a report case
+
 ```http
 POST /api/v1/report
 Authorization: Bearer <access_token_or_api_key>
@@ -53,7 +61,8 @@ Content-Type: application/json
 {
   "full_name": "Adebola James",
   "contact_email": "adebola@example.com",
-  "reference_id": "loan_app_9981"
+  "reference_id": "loan_app_9981",
+  "country_codes": ["US"]
 }
 ```
 
@@ -63,24 +72,68 @@ Content-Type: application/json
 {
   "case_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "PENDING_CONNECTION",
-  "message": "Consent link sent",
+  "message": "Embed link_url in an iframe on your platform to open Plaid Link. Report will be delivered via webhook upon completion.",
   "link_url": "https://app.example.com/plaid/link?session=opaque-token"
 }
 ```
 
-Embed `link_url` (iframe or redirect). The hosted Link UI loads branding via `GET /c/{token}/session` (always returns `display_name` / `brand_name` / `logo_url`, even if expired), then `POST /c/{token}/link-token` when the session is `valid`.
+### 3. Open bank connection on your frontend
 
-Poll status:
+`link_url` is for your **frontend**, not a backend call. Embed it in an iframe or redirect the applicant to it so they can connect their bank.
+### 4. Case statuses
+
+| Status | Meaning |
+|--------|---------|
+| `PENDING_CONNECTION` | Consent link issued; waiting for the applicant to connect a bank |
+| `CONNECTED` | Bank connected; report generation queued |
+| `PROCESSING` | Pulling provider data and scoring |
+| `REPORT_READY` | Report ready — payload available via poll and `report.ready` webhook |
+| `FAILED` | Generation failed (or marked failed after provider/item errors) |
+| `EXPIRED` | Consent link expired before the applicant connected |
+
+Terminal statuses: `REPORT_READY`, `FAILED`, `EXPIRED`.
+
+### 5. Receive the result via webhook
+
+After the applicant connects, Scrub generates the report asynchronously and POSTs to your webhook URL:
+
+| Event | When |
+|-------|------|
+| `report.ready` | Status is `REPORT_READY` — body includes score and report summary |
+| `report.failed` | Status is `FAILED` or `EXPIRED` |
+
+**`report.ready` example**
+
+```json
+{
+  "event": "report.ready",
+  "case_id": "550e8400-e29b-41d4-a716-446655440000",
+  "reference_id": "loan_app_9981",
+  "status": "REPORT_READY",
+  "report": {
+    "score": 72,
+    "income_monthly_usd": 4200,
+    "income_monthly_local": 4200,
+    "affordability_ceiling_local": 1260,
+    "dti_ratio": 0.31
+  },
+  "report_pdf_url": "https://api.example.com/reports/..."
+}
+```
+
+Return `2xx` within 15 seconds. Failed deliveries retry with backoff. Full details: [Webhooks](/docs/webhooks).
+
+### 6. Or poll for status
 
 ```http
 GET /api/v1/report/{case_id}
 Authorization: Bearer <access_token_or_api_key>
 ```
 
-When status is `REPORT_READY`, the response includes score and report payload.
+When status is `REPORT_READY`, the response includes score and report payload. `webhook_delivered_at` is set after a successful webhook delivery.
 
 ## Next steps
 
-- [Webhooks](/docs/webhooks) — receive async report completion events
+- [Webhooks](/docs/webhooks) — signature verification, retries, and test events
 - [Idempotency](/docs/idempotency) — safely retry failed requests
 - [API Reference](/api) — full endpoint documentation

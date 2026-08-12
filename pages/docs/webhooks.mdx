@@ -4,7 +4,9 @@ title: Webhooks
 
 Scrub delivers asynchronous events to your server via HTTPS POST. Register your webhook URL in the dashboard under **Settings → Controls**.
 
-When a financial report finishes (or fails), ScrubDetect POSTs a signed JSON payload to that URL. Celery retries with exponential backoff if delivery fails.
+When a financial report finishes (or fails), Scrub POSTs a signed JSON payload to that URL. Celery retries with exponential backoff if delivery fails.
+
+End-to-end report flow (create → Link → statuses → webhook): [Getting Started](/docs/gettingStarted#quickstart--start-a-financial-report).
 
 <WebhookFlow />
 

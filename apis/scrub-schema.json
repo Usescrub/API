@@ -256,7 +256,7 @@
       "post": {
         "summary": "Create financial report",
         "operationId": "report_create",
-        "description": "Start a financial report case. Sends a bank-connection consent link to the applicant. Report is delivered via webhook when complete; poll GET /report/{case_id} for status.",
+        "description": "Start a financial report case. Returns link_url for frontend embed (iframe/redirect). Applicant connects a bank via hosted Link; when done, Scrub POSTs report.ready or report.failed to your Controls webhook URL. Poll GET /report/{case_id} for status: PENDING_CONNECTION, CONNECTED, PROCESSING, REPORT_READY, FAILED, EXPIRED.",
         "parameters": [
           {
             "name": "data",
@@ -314,7 +314,7 @@
       "get": {
         "summary": "Get financial report status",
         "operationId": "report_retrieve",
-        "description": "Fetch case status. When status is REPORT_READY, includes score, report payload, and optional PDF URL.",
+        "description": "Fetch case status. Statuses: PENDING_CONNECTION, CONNECTED, PROCESSING, REPORT_READY, FAILED, EXPIRED. When status is REPORT_READY, includes score, report payload, and optional PDF URL. Prefer webhooks (report.ready / report.failed) for async delivery.",
         "parameters": [
           {
             "name": "case_id",
@@ -1148,7 +1148,7 @@
         },
         "display_name": {
           "type": "string",
-          "description": "Name shown in Link UI \u2014 client brand_name, else client name, else ScrubDetect",
+          "description": "Name shown in Link UI \u2014 client brand_name, else client name, else Scrub",
           "example": "Acme Lending"
         },
         "brand_name": {
