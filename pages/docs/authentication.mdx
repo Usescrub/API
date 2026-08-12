@@ -6,10 +6,10 @@ Scrub supports two authentication methods depending on your integration type.
 
 ## Bearer token (JWT)
 
-For dashboard users and server-to-server integrations that manage user sessions:
+For dashboard users and session-based integrations:
 
 ```http
-POST /v1/accounts/login/
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -22,8 +22,14 @@ Response:
 
 ```json
 {
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "you@company.ng",
+    "username": "you"
+  }
 }
 ```
 
@@ -33,30 +39,30 @@ Use the access token in subsequent requests:
 Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
 ```
 
-Access tokens expire after **60 minutes**. Refresh with:
+Access tokens expire after **30 minutes**. Refresh with:
 
 ```http
-POST /v1/accounts/refresh/
+POST /api/v1/auth/refresh
 Content-Type: application/json
 
-{ "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..." }
+{ "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc..." }
 ```
 
 ## API key
 
-For production server integrations, use a long-lived API key from the dashboard:
+For production server integrations, create a Bearer API key in the dashboard (Token Management):
 
 ```http
-Authorization: Bearer sk_live_abc123...
+Authorization: Bearer <api_token>
 ```
 
-API keys are scoped to your organization and can be rotated without downtime.
+API keys authenticate programmatic access to Detect and Financial Report endpoints. JWT is for the dashboard UI only.
 
 ## Request headers
 
 | Header | Required | Description |
 |--------|----------|-------------|
-| `Authorization` | Yes | `Bearer <token>` or `Bearer <api_key>` |
-| `Content-Type` | Yes (POST/PUT) | `application/json` |
+| `Authorization` | Yes | `Bearer <jwt>` or `Bearer <api_token>` |
+| `Content-Type` | Yes (JSON POST/PUT) | `application/json` |
 | `Idempotency-Key` | No | Unique key for safe retries on POST |
 | `X-Request-ID` | No | Your correlation ID (echoed in logs) |

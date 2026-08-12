@@ -8,12 +8,12 @@ Follow this guide to make your first Scrub API call in under five minutes.
 
 <IntegrationTimeline />
 
-## Quickstart — verify a BVN
+## Quickstart — detect an uploaded document
 
-**1. Authenticate**
+**1. Authenticate** (dashboard session) or use an API key from Token Management.
 
 ```http
-POST /v1/accounts/login/
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -22,56 +22,65 @@ Content-Type: application/json
 }
 ```
 
-**2. Verify identity**
+**2. Upload a file for detection**
 
 ```http
-POST /v1/verify-bvn/
-Authorization: Bearer <access_token>
-Content-Type: application/json
+POST /api/v1/detect/file
+Authorization: Bearer <access_token_or_api_key>
+Content-Type: multipart/form-data
 
-{
-  "bvn": "22345678901"
-}
+file=@document.png
 ```
 
-**3. Expected response**
+**3. Expected response shape**
 
 ```json
 {
-  "valid": true,
-  "full_name": "Adebola James",
-  "phone_number": "08031234567",
-  "date_of_birth": "1990-05-15",
-  "request_id": "req_abc123"
+  "success": true,
+  "cached": false,
+  "detection_data": {},
+  "image_hash": "sha256:..."
 }
 ```
 
-## Quickstart — screen a transaction
-
-Send each transfer to the fraud analysis endpoint before settlement:
+## Quickstart — start a financial report
 
 ```http
-POST /v1/fraud/analyze/
-Authorization: Bearer <access_token>
-Idempotency-Key: idem_unique_key_001
+POST /api/v1/report
+Authorization: Bearer <access_token_or_api_key>
 Content-Type: application/json
 
 {
-  "transaction_id": "TXN123456789",
-  "sender_account": "0123456789",
-  "receiver_account": "9876543210",
-  "amount": 125000.50,
-  "channel": "web",
-  "ip_address": "102.89.23.45"
+  "full_name": "Adebola James",
+  "contact_email": "adebola@example.com",
+  "reference_id": "loan_app_9981"
 }
 ```
 
-<RiskMeter score={45} label="Example response risk score" />
+**202 response**
 
-Act on the `recommended_action` field: `approve`, `review`, `decline`, or `step_up_auth`.
+```json
+{
+  "case_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "PENDING_CONNECTION",
+  "message": "Consent link sent",
+  "link_url": "https://app.example.com/plaid/link?session=opaque-token"
+}
+```
+
+Embed `link_url` (iframe or redirect). The hosted Link UI loads branding via `GET /c/{token}/session` (always returns `display_name` / `brand_name` / `logo_url`, even if expired), then `POST /c/{token}/link-token` when the session is `valid`.
+
+Poll status:
+
+```http
+GET /api/v1/report/{case_id}
+Authorization: Bearer <access_token_or_api_key>
+```
+
+When status is `REPORT_READY`, the response includes score and report payload.
 
 ## Next steps
 
-- [Webhooks](/docs/webhooks) — receive async fraud alerts
+- [Webhooks](/docs/webhooks) — receive async report completion events
 - [Idempotency](/docs/idempotency) — safely retry failed requests
 - [API Reference](/api) — full endpoint documentation

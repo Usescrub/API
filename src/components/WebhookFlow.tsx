@@ -3,6 +3,9 @@ const events = [
   { event: 'fraud.score.updated', trigger: 'Account fraud score changes', color: '#f97316' },
   { event: 'credit.report.ready', trigger: 'Async credit report generation completes', color: '#22c55e' },
   { event: 'verification.completed', trigger: 'BVN/NIN verification finishes', color: '#3b82f6' },
+  { event: 'report.ready', trigger: 'Financial report is ready', color: '#22c55e' },
+  { event: 'report.failed', trigger: 'Report failed or consent link expired', color: '#ef4444' },
+  { event: 'webhook.test', trigger: 'Manual test from Settings → Controls', color: '#FAD645' },
 ]
 
 export default function WebhookFlow() {

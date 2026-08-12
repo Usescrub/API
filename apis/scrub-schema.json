@@ -13,15 +13,22 @@
     "version": "v1"
   },
   "host": "odoopi.usescrub.io",
-  "schemes": ["https"],
-  "basePath": "/v1",
-  "consumes": ["application/json"],
-  "produces": ["application/json"],
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "securityDefinitions": {
     "Bearer": {
       "type": "apiKey",
       "name": "Authorization",
-      "in": "header"
+      "in": "header",
+      "description": "JWT access token or API key from Token Management. Format: Bearer <token>"
     }
   },
   "security": [
@@ -31,12 +38,20 @@
   ],
   "tags": [
     {
-      "name": "accounts",
-      "description": "User account management"
+      "name": "auth",
+      "description": "Authentication and session management"
     },
     {
       "name": "detect",
-      "description": "Scrub detect system"
+      "description": "AI-generated document detection"
+    },
+    {
+      "name": "report",
+      "description": "Financial reports via bank connection (Plaid)"
+    },
+    {
+      "name": "consent",
+      "description": "Public bank-connection consent session (used by the hosted Link UI; no auth)"
     },
     {
       "name": "verification",
@@ -48,146 +63,354 @@
     },
     {
       "name": "credit",
-      "description": "Credit scoring, reporting, and bureau inquiry for Nigerian consumers"
+      "description": "Credit scoring and bureau inquiry for Nigerian consumers"
     }
   ],
   "paths": {
-    "/accounts/login/": {
+    "/api/v1/auth/login": {
       "post": {
         "summary": "Login",
-        "operationId": "accounts_login_create",
-        "description": "Takes a set of user credentials and returns an access and refresh JSON web\ntoken pair to prove the authentication of those credentials.",
+        "operationId": "auth_login",
+        "description": "Authenticate with email and password. Returns a JWT access token (and optional refresh token) for dashboard sessions.",
+        "security": [],
         "parameters": [
           {
             "name": "data",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/VerifiedTokenObtainPair"
+              "$ref": "#/definitions/LoginRequest"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Authenticated",
             "schema": {
-              "$ref": "#/definitions/VerifiedTokenObtainPairResponse"
+              "$ref": "#/definitions/TokenResponse"
             }
           }
         },
-        "tags": ["accounts"]
-      },
-      "parameters": []
+        "tags": [
+          "auth"
+        ]
+      }
     },
-    "/accounts/me/": {
+    "/api/v1/auth/me": {
       "get": {
-        "operationId": "accounts_me_list",
-        "summary": "Get authenticated user ",
-        "description": "",
+        "operationId": "auth_me",
+        "summary": "Get authenticated user",
+        "description": "Returns the current user for a valid JWT access token.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Current user",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/User"
-              }
+              "$ref": "#/definitions/UserInfoResponse"
             }
           }
         },
-        "tags": ["accounts"]
-      },
-      "parameters": []
-    },
-    "/accounts/refresh/": {
-      "post": {
-        "summary": "Refresh token",
-        "operationId": "accounts_refresh_create",
-        "description": "Takes a refresh type JSON web token and returns an access type JSON web\ntoken if the refresh token is valid.",
-        "parameters": [
-          {
-            "name": "data",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/TokenRefresh"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/TokenRefresh"
-            }
-          }
-        },
-        "tags": ["accounts"]
-      },
-      "parameters": []
-    },
-    "/detect/": {
-      "post": {
-        "summary": "Detect AI generated file",
-        "operationId": "detect_real_ai_gen",
-        "description": "Takes a document in defined format and infers if real or AI generated.",
-        "parameters": [
-          {
-            "name": "data",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "file": {
-                  "type": "string",
-                  "format": "binary"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": ["passport", "receipt", "nin"]
-                }
-              }
-            }
-          }
-        ],
-
-        "responses": {
-          "200": {
-            "description": "Successful Request",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "prediction": {
-                  "type": "string",
-                  "enum": ["real", "ai_gen"]
-                },
-                "probabilities": {
-                  "type": "object",
-                  "properties": {
-                    "ai_generated": {
-                      "type": "number",
-                      "format": "float"
-                    },
-                    "real": {
-                      "type": "number",
-                      "format": "float"
-                    }
-                  }
-                },
-                "extracted_text": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          }
-        },
-        "tags": ["detect"]
+        "tags": [
+          "auth"
+        ]
       }
     },
-    "/verify-bvn/": {
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "Refresh token",
+        "operationId": "auth_refresh",
+        "description": "Exchange a refresh token for a new access token.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RefreshTokenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New access token",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/detect/file": {
+      "post": {
+        "summary": "Detect AI-generated file",
+        "operationId": "detect_file",
+        "description": "Upload an image or document and infer whether it is real or AI-generated.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "formData",
+            "required": true,
+            "type": "file",
+            "description": "Image or document file to analyze"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detection result",
+            "schema": {
+              "$ref": "#/definitions/DetectionResponse"
+            }
+          }
+        },
+        "tags": [
+          "detect"
+        ]
+      }
+    },
+    "/api/v1/detect/url": {
+      "post": {
+        "summary": "Detect AI-generated image from URL",
+        "operationId": "detect_url",
+        "description": "Analyze an image at a public URL for AI generation signals.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "image_url"
+              ],
+              "properties": {
+                "image_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "https://example.com/doc.png"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detection result",
+            "schema": {
+              "$ref": "#/definitions/DetectionResponse"
+            }
+          }
+        },
+        "tags": [
+          "detect"
+        ]
+      }
+    },
+    "/api/v1/detect/batch": {
+      "post": {
+        "summary": "Batch detect from image URLs",
+        "operationId": "detect_batch",
+        "description": "Analyze multiple image URLs in one request.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "image_urls"
+              ],
+              "properties": {
+                "image_urls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch detection results",
+            "schema": {
+              "$ref": "#/definitions/BatchDetectionResponse"
+            }
+          }
+        },
+        "tags": [
+          "detect"
+        ]
+      }
+    },
+    "/api/v1/report": {
+      "post": {
+        "summary": "Create financial report",
+        "operationId": "report_create",
+        "description": "Start a financial report case. Sends a bank-connection consent link to the applicant. Report is delivered via webhook when complete; poll GET /report/{case_id} for status.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateReportRequest"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Case accepted",
+            "schema": {
+              "$ref": "#/definitions/CreateReportResponse"
+            }
+          }
+        },
+        "tags": [
+          "report"
+        ]
+      },
+      "get": {
+        "summary": "List financial reports",
+        "operationId": "report_list",
+        "description": "List financial report cases for the authenticated client/user.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "default": 50
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "integer",
+            "default": 0
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated cases",
+            "schema": {
+              "$ref": "#/definitions/CaseListResponse"
+            }
+          }
+        },
+        "tags": [
+          "report"
+        ]
+      }
+    },
+    "/api/v1/report/{case_id}": {
+      "get": {
+        "summary": "Get financial report status",
+        "operationId": "report_retrieve",
+        "description": "Fetch case status. When status is REPORT_READY, includes score, report payload, and optional PDF URL.",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case status",
+            "schema": {
+              "$ref": "#/definitions/CaseStatusResponse"
+            }
+          },
+          "404": {
+            "description": "Case not found",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": [
+          "report"
+        ]
+      }
+    },
+    "/c/{consent_token}/session": {
+      "get": {
+        "summary": "Get consent session",
+        "operationId": "consent_session",
+        "description": "Public session lookup for the hosted Plaid Link UI. Always returns org branding (`display_name`, `brand_name`, `logo_url`) even when the link is expired, used, or invalid. Mounted at the app root (`/c/...`), not under `/api/v1`.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "consent_token",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Opaque token from CreateReportResponse.link_url"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session status and branding",
+            "schema": {
+              "$ref": "#/definitions/ConsentSessionResponse"
+            }
+          }
+        },
+        "tags": [
+          "consent"
+        ]
+      }
+    },
+    "/c/{consent_token}/link-token": {
+      "post": {
+        "summary": "Create Plaid link token",
+        "operationId": "consent_link_token",
+        "description": "Creates a provider link token for a valid consent session. Returns branding fields for the Link UI. Mounted at the app root (`/c/...`), not under `/api/v1`.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "consent_token",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link token and branding",
+            "schema": {
+              "$ref": "#/definitions/LinkTokenResponse"
+            }
+          },
+          "404": {
+            "description": "Invalid link",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          },
+          "410": {
+            "description": "Link expired or already used",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "tags": [
+          "consent"
+        ]
+      }
+    },
+    "/api/v1/verify-bvn/": {
       "post": {
         "summary": "Verify BVN",
         "operationId": "verification_bvn_create",
@@ -216,10 +439,12 @@
             }
           }
         },
-        "tags": ["verification"]
+        "tags": [
+          "verification"
+        ]
       }
     },
-    "/verify-nin/": {
+    "/api/v1/verify-nin/": {
       "post": {
         "summary": "Verify NIN",
         "operationId": "verification_nin_create",
@@ -248,14 +473,16 @@
             }
           }
         },
-        "tags": ["verification"]
+        "tags": [
+          "verification"
+        ]
       }
     },
-    "/fraud/analyze/": {
+    "/api/v1/fraud/analyze/": {
       "post": {
         "summary": "Analyze transaction for fraud",
         "operationId": "fraud_analyze_create",
-        "description": "Runs real-time fraud analysis on a transaction using geolocation signals, velocity checks, device fingerprinting, and network graph analysis. Returns a risk score (0–100) and recommended action.",
+        "description": "Runs real-time fraud analysis on a transaction using geolocation signals, velocity checks, device fingerprinting, and network graph analysis. Returns a risk score (0\u2013100) and recommended action.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -287,10 +514,12 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/score/": {
+    "/api/v1/fraud/score/": {
       "get": {
         "summary": "Get account fraud score",
         "operationId": "fraud_score_retrieve",
@@ -325,10 +554,12 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/watchlist/check/": {
+    "/api/v1/fraud/watchlist/check/": {
       "post": {
         "summary": "Screen against watchlists",
         "operationId": "fraud_watchlist_check",
@@ -351,10 +582,12 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/device-fingerprint/": {
+    "/api/v1/fraud/device-fingerprint/": {
       "post": {
         "summary": "Assess device fingerprint risk",
         "operationId": "fraud_device_fingerprint_create",
@@ -377,14 +610,16 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/velocity-check/": {
+    "/api/v1/fraud/velocity-check/": {
       "post": {
         "summary": "Check transaction velocity",
         "operationId": "fraud_velocity_check_create",
-        "description": "Detects abnormal transaction velocity — rapid transfers, burst login attempts, or geographic impossibility — within a configurable time window.",
+        "description": "Detects abnormal transaction velocity \u2014 rapid transfers, burst login attempts, or geographic impossibility \u2014 within a configurable time window.",
         "parameters": [
           {
             "name": "data",
@@ -403,10 +638,12 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/report/": {
+    "/api/v1/fraud/report/": {
       "post": {
         "summary": "Report confirmed fraud",
         "operationId": "fraud_report_create",
@@ -435,10 +672,12 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/fraud/alerts/": {
+    "/api/v1/fraud/alerts/": {
       "get": {
         "summary": "List fraud alerts",
         "operationId": "fraud_alerts_list",
@@ -455,7 +694,12 @@
             "in": "query",
             "required": false,
             "type": "string",
-            "enum": ["low", "medium", "high", "critical"]
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
           },
           {
             "name": "page",
@@ -473,14 +717,16 @@
             }
           }
         },
-        "tags": ["fraud"]
+        "tags": [
+          "fraud"
+        ]
       }
     },
-    "/credit/score/": {
+    "/api/v1/credit/score/": {
       "post": {
         "summary": "Get credit score",
         "operationId": "credit_score_create",
-        "description": "Retrieves a consumer credit score (300–850) based on repayment history, credit utilization, and bureau data from CRC Credit Bureau and FirstCentral. Requires explicit customer consent.",
+        "description": "Retrieves a consumer credit score (300\u2013850) based on repayment history, credit utilization, and bureau data from CRC Credit Bureau and FirstCentral. Requires explicit customer consent.",
         "parameters": [
           {
             "name": "data",
@@ -505,73 +751,12 @@
             }
           }
         },
-        "tags": ["credit"]
+        "tags": [
+          "credit"
+        ]
       }
     },
-    "/credit/report/": {
-      "post": {
-        "summary": "Generate credit report",
-        "operationId": "credit_report_create",
-        "description": "Generates a comprehensive credit report including score, active loans, repayment history, and delinquencies. Reports are available for retrieval for 30 days.",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "data",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CreditReportRequest"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Report generation initiated",
-            "schema": {
-              "$ref": "#/definitions/CreditReportInitResponse"
-            }
-          }
-        },
-        "tags": ["credit"]
-      }
-    },
-    "/credit/report/{report_id}/": {
-      "get": {
-        "summary": "Retrieve credit report",
-        "operationId": "credit_report_retrieve",
-        "description": "Fetches a previously generated credit report by ID. Poll this endpoint after receiving a `credit.report.ready` webhook event.",
-        "parameters": [
-          {
-            "name": "report_id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "Report ID returned from POST /credit/report/"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Full credit report",
-            "schema": {
-              "$ref": "#/definitions/CreditReport"
-            }
-          },
-          "404": {
-            "description": "Report not found or expired",
-            "schema": {
-              "$ref": "#/definitions/ApiError"
-            }
-          }
-        },
-        "tags": ["credit"]
-      }
-    },
-    "/credit/inquiry/": {
+    "/api/v1/credit/inquiry/": {
       "post": {
         "summary": "Submit credit inquiry",
         "operationId": "credit_inquiry_create",
@@ -594,10 +779,12 @@
             }
           }
         },
-        "tags": ["credit"]
+        "tags": [
+          "credit"
+        ]
       }
     },
-    "/credit/history/": {
+    "/api/v1/credit/history/": {
       "get": {
         "summary": "Get repayment history",
         "operationId": "credit_history_list",
@@ -627,7 +814,9 @@
             }
           }
         },
-        "tags": ["credit"]
+        "tags": [
+          "credit"
+        ]
       }
     }
   },
@@ -642,7 +831,13 @@
         },
         "error_type": {
           "type": "string",
-          "enum": ["INVALID_REQUEST", "AUTHENTICATION", "NOT_FOUND", "RATE_LIMIT", "INTERNAL"],
+          "enum": [
+            "INVALID_REQUEST",
+            "AUTHENTICATION",
+            "NOT_FOUND",
+            "RATE_LIMIT",
+            "INTERNAL"
+          ],
           "example": "INVALID_REQUEST"
         },
         "message": {
@@ -656,8 +851,452 @@
         }
       }
     },
+    "LoginRequest": {
+      "required": [
+        "email",
+        "password"
+      ],
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "example": "user@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "securepassword123"
+        }
+      }
+    },
+    "UserInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "full_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "phone": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "company": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "company_size": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "industry": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "role": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "country": {
+          "type": "string",
+          "x-nullable": true
+        }
+      }
+    },
+    "TokenResponse": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "refresh_token": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "token_type": {
+          "type": "string",
+          "example": "bearer"
+        },
+        "user": {
+          "$ref": "#/definitions/UserInfo"
+        }
+      }
+    },
+    "RefreshTokenRequest": {
+      "required": [
+        "refresh_token"
+      ],
+      "type": "object",
+      "properties": {
+        "refresh_token": {
+          "type": "string"
+        }
+      }
+    },
+    "UserInfoResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "full_name": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "phone": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "company": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "company_size": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "industry": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "role": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "country": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "is_verified": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_login_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        }
+      }
+    },
+    "DetectionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "cached": {
+          "type": "boolean"
+        },
+        "detection_data": {
+          "type": "object",
+          "description": "Provider detection payload (filename, status, AI score, media, timing)"
+        },
+        "image_hash": {
+          "type": "string"
+        }
+      }
+    },
+    "BatchDetectionResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "image_url": {
+                "type": "string"
+              },
+              "image_hash": {
+                "type": "string"
+              },
+              "success": {
+                "type": "boolean"
+              },
+              "cached": {
+                "type": "boolean",
+                "x-nullable": true
+              },
+              "detection_data": {
+                "type": "object",
+                "x-nullable": true
+              },
+              "task_id": {
+                "type": "string",
+                "x-nullable": true
+              },
+              "status": {
+                "type": "string",
+                "x-nullable": true
+              },
+              "error": {
+                "type": "string",
+                "x-nullable": true
+              }
+            }
+          }
+        },
+        "total": {
+          "type": "integer"
+        }
+      }
+    },
+    "CreateReportRequest": {
+      "required": [
+        "full_name",
+        "reference_id"
+      ],
+      "type": "object",
+      "properties": {
+        "full_name": {
+          "type": "string",
+          "example": "Adebola James"
+        },
+        "contact_phone": {
+          "type": "string",
+          "x-nullable": true,
+          "example": "+2348012345678"
+        },
+        "contact_email": {
+          "type": "string",
+          "format": "email",
+          "x-nullable": true
+        },
+        "reference_id": {
+          "type": "string",
+          "example": "loan_app_9981"
+        },
+        "country_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "example": [
+            "NG"
+          ],
+          "default": [
+            "US"
+          ],
+          "description": "ISO 3166-1 alpha-2 country codes for Plaid Link"
+        }
+      },
+      "description": "At least one of contact_phone or contact_email is required. subject_id is assigned internally."
+    },
+    "CreateReportResponse": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "example": "PENDING_CONNECTION"
+        },
+        "message": {
+          "type": "string"
+        },
+        "link_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Embed this URL in an iframe on the customer platform to open Plaid Link. The hosted UI calls GET /c/{token}/session then POST /c/{token}/link-token.",
+          "example": "https://app.example.com/plaid/link?session=opaque-token"
+        }
+      }
+    },
+    "ConsentSessionResponse": {
+      "type": "object",
+      "required": [
+        "status",
+        "display_name"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "expired",
+            "used",
+            "invalid"
+          ],
+          "example": "valid"
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Name shown in Link UI \u2014 client brand_name, else client name, else ScrubDetect",
+          "example": "Acme Lending"
+        },
+        "brand_name": {
+          "type": "string",
+          "x-nullable": true,
+          "example": "Acme Lending"
+        },
+        "logo_url": {
+          "type": "string",
+          "format": "uri",
+          "x-nullable": true,
+          "example": "https://cdn.example.com/logo.png"
+        },
+        "applicant_name": {
+          "type": "string",
+          "x-nullable": true,
+          "example": "Adebola James"
+        },
+        "detail": {
+          "type": "string",
+          "x-nullable": true,
+          "description": "Human-readable reason when status is not valid",
+          "example": "Link expired"
+        }
+      }
+    },
+    "LinkTokenResponse": {
+      "type": "object",
+      "required": [
+        "link_token",
+        "provider"
+      ],
+      "properties": {
+        "link_token": {
+          "type": "string",
+          "description": "Provider link token for Plaid Link initialize",
+          "example": "link-sandbox-xxxxxxxx"
+        },
+        "provider": {
+          "type": "string",
+          "example": "plaid"
+        },
+        "brand_name": {
+          "type": "string",
+          "x-nullable": true,
+          "example": "Acme Lending"
+        },
+        "logo_url": {
+          "type": "string",
+          "format": "uri",
+          "x-nullable": true,
+          "example": "https://cdn.example.com/logo.png"
+        },
+        "display_name": {
+          "type": "string",
+          "x-nullable": true,
+          "description": "Resolved display name used as Plaid client_name",
+          "example": "Acme Lending"
+        }
+      }
+    },
+    "ReportPayload": {
+      "type": "object",
+      "properties": {
+        "score": {
+          "type": "integer"
+        },
+        "report": {
+          "type": "object"
+        },
+        "report_pdf_url": {
+          "type": "string",
+          "x-nullable": true
+        }
+      }
+    },
+    "CaseStatusResponse": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reference_id": {
+          "type": "string"
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING_CONNECTION",
+            "CONNECTED",
+            "PROCESSING",
+            "REPORT_READY",
+            "FAILED",
+            "EXPIRED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "connection_completed_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        },
+        "report_completed_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        },
+        "webhook_delivered_at": {
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        },
+        "report": {
+          "$ref": "#/definitions/ReportPayload"
+        }
+      }
+    },
+    "CaseListResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CaseStatusResponse"
+          }
+        },
+        "total": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        }
+      }
+    },
     "BvnVerifyRequest": {
-      "required": ["bvn"],
+      "required": [
+        "bvn"
+      ],
       "type": "object",
       "properties": {
         "bvn": {
@@ -670,15 +1309,33 @@
     "BvnVerifyResponse": {
       "type": "object",
       "properties": {
-        "valid": { "type": "boolean", "example": true },
-        "full_name": { "type": "string", "example": "Adebola James" },
-        "phone_number": { "type": "string", "example": "08031234567" },
-        "date_of_birth": { "type": "string", "format": "date", "example": "1990-05-15" },
-        "request_id": { "type": "string", "example": "req_abc123" }
+        "valid": {
+          "type": "boolean",
+          "example": true
+        },
+        "full_name": {
+          "type": "string",
+          "example": "Adebola James"
+        },
+        "phone_number": {
+          "type": "string",
+          "example": "08031234567"
+        },
+        "date_of_birth": {
+          "type": "string",
+          "format": "date",
+          "example": "1990-05-15"
+        },
+        "request_id": {
+          "type": "string",
+          "example": "req_abc123"
+        }
       }
     },
     "NinVerifyRequest": {
-      "required": ["nin"],
+      "required": [
+        "nin"
+      ],
       "type": "object",
       "properties": {
         "nin": {
@@ -691,299 +1348,809 @@
     "NinVerifyResponse": {
       "type": "object",
       "properties": {
-        "valid": { "type": "boolean", "example": true },
-        "full_name": { "type": "string", "example": "Chioma Okonkwo" },
-        "gender": { "type": "string", "enum": ["M", "F"], "example": "F" },
-        "request_id": { "type": "string" }
+        "valid": {
+          "type": "boolean",
+          "example": true
+        },
+        "full_name": {
+          "type": "string",
+          "example": "Chioma Okonkwo"
+        },
+        "gender": {
+          "type": "string",
+          "enum": [
+            "M",
+            "F"
+          ],
+          "example": "F"
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "FraudAnalyzeRequest": {
-      "required": ["transaction_id", "sender_account", "receiver_account", "amount", "channel"],
+      "required": [
+        "transaction_id",
+        "sender_account",
+        "receiver_account",
+        "amount",
+        "channel"
+      ],
       "type": "object",
       "properties": {
-        "transaction_id": { "type": "string", "example": "TXN123456789" },
-        "sender_account": { "type": "string", "example": "0123456789" },
-        "receiver_account": { "type": "string", "example": "9876543210" },
-        "amount": { "type": "number", "format": "float", "example": 125000.5 },
-        "currency": { "type": "string", "enum": ["NGN", "USD"], "default": "NGN" },
-        "channel": { "type": "string", "enum": ["mobile", "ussd", "web", "atm", "pos"], "example": "web" },
-        "ip_address": { "type": "string", "example": "102.89.23.45" },
-        "device_id": { "type": "string", "example": "dev_fingerprint_abc" },
-        "metadata": { "type": "object", "description": "Optional key-value context" }
+        "transaction_id": {
+          "type": "string",
+          "example": "TXN123456789"
+        },
+        "sender_account": {
+          "type": "string",
+          "example": "0123456789"
+        },
+        "receiver_account": {
+          "type": "string",
+          "example": "9876543210"
+        },
+        "amount": {
+          "type": "number",
+          "format": "float",
+          "example": 125000.5
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "NGN",
+            "USD"
+          ],
+          "default": "NGN"
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "mobile",
+            "ussd",
+            "web",
+            "atm",
+            "pos"
+          ],
+          "example": "web"
+        },
+        "ip_address": {
+          "type": "string",
+          "example": "102.89.23.45"
+        },
+        "device_id": {
+          "type": "string",
+          "example": "dev_fingerprint_abc"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional key-value context"
+        }
       }
     },
     "FraudAnalyzeResponse": {
       "type": "object",
       "properties": {
-        "transaction_id": { "type": "string" },
-        "is_fraud": { "type": "boolean", "example": false },
-        "risk_score": { "type": "number", "description": "0 (safe) to 100 (high risk)", "example": 45.7 },
-        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "medium" },
-        "recommended_action": { "type": "string", "enum": ["approve", "review", "decline", "step_up_auth"], "example": "approve" },
+        "transaction_id": {
+          "type": "string"
+        },
+        "is_fraud": {
+          "type": "boolean",
+          "example": false
+        },
+        "risk_score": {
+          "type": "number",
+          "description": "0 (safe) to 100 (high risk)",
+          "example": 45.7
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "example": "medium"
+        },
+        "recommended_action": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "review",
+            "decline",
+            "step_up_auth"
+          ],
+          "example": "approve"
+        },
         "signals": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "code": { "type": "string", "example": "VELOCITY_SPIKE" },
-              "weight": { "type": "number", "example": 0.35 },
-              "description": { "type": "string", "example": "3 transfers in 5 minutes" }
+              "code": {
+                "type": "string",
+                "example": "VELOCITY_SPIKE"
+              },
+              "weight": {
+                "type": "number",
+                "example": 0.35
+              },
+              "description": {
+                "type": "string",
+                "example": "3 transfers in 5 minutes"
+              }
             }
           }
         },
-        "request_id": { "type": "string" }
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "FraudScoreResponse": {
       "type": "object",
       "properties": {
-        "account_number": { "type": "string", "example": "0123456789" },
-        "fraud_score": { "type": "number", "example": 73.2 },
-        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "high" },
-        "last_updated": { "type": "string", "format": "date-time" },
-        "report_count": { "type": "integer", "description": "Number of network fraud reports", "example": 2 }
+        "account_number": {
+          "type": "string",
+          "example": "0123456789"
+        },
+        "fraud_score": {
+          "type": "number",
+          "example": 73.2
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "example": "high"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "report_count": {
+          "type": "integer",
+          "description": "Number of network fraud reports",
+          "example": 2
+        }
       }
     },
     "WatchlistCheckRequest": {
-      "required": ["subject_type", "identifier"],
+      "required": [
+        "subject_type",
+        "identifier"
+      ],
       "type": "object",
       "properties": {
-        "subject_type": { "type": "string", "enum": ["account", "bvn", "nin", "phone", "email"], "example": "bvn" },
-        "identifier": { "type": "string", "example": "22345678901" },
-        "full_name": { "type": "string", "example": "Adebola James" }
+        "subject_type": {
+          "type": "string",
+          "enum": [
+            "account",
+            "bvn",
+            "nin",
+            "phone",
+            "email"
+          ],
+          "example": "bvn"
+        },
+        "identifier": {
+          "type": "string",
+          "example": "22345678901"
+        },
+        "full_name": {
+          "type": "string",
+          "example": "Adebola James"
+        }
       }
     },
     "WatchlistCheckResponse": {
       "type": "object",
       "properties": {
-        "matched": { "type": "boolean", "example": false },
-        "match_count": { "type": "integer", "example": 0 },
+        "matched": {
+          "type": "boolean",
+          "example": false
+        },
+        "match_count": {
+          "type": "integer",
+          "example": 0
+        },
         "matches": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "list_name": { "type": "string", "example": "scrub_fraud_network" },
-              "match_score": { "type": "number", "example": 0.92 },
-              "reason": { "type": "string", "example": "Reported phishing — Jan 2025" }
+              "list_name": {
+                "type": "string",
+                "example": "scrub_fraud_network"
+              },
+              "match_score": {
+                "type": "number",
+                "example": 0.92
+              },
+              "reason": {
+                "type": "string",
+                "example": "Reported phishing \u2014 Jan 2025"
+              }
             }
           }
         },
-        "request_id": { "type": "string" }
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "DeviceFingerprintRequest": {
-      "required": ["device_id", "ip_address", "user_agent"],
+      "required": [
+        "device_id",
+        "ip_address",
+        "user_agent"
+      ],
       "type": "object",
       "properties": {
-        "device_id": { "type": "string", "example": "dev_abc123" },
-        "ip_address": { "type": "string", "example": "102.89.23.45" },
-        "user_agent": { "type": "string", "example": "Mozilla/5.0 (Linux; Android 14)..." },
-        "account_number": { "type": "string", "example": "0123456789" },
-        "timezone": { "type": "string", "example": "Africa/Lagos" },
-        "is_emulator": { "type": "boolean", "example": false }
+        "device_id": {
+          "type": "string",
+          "example": "dev_abc123"
+        },
+        "ip_address": {
+          "type": "string",
+          "example": "102.89.23.45"
+        },
+        "user_agent": {
+          "type": "string",
+          "example": "Mozilla/5.0 (Linux; Android 14)..."
+        },
+        "account_number": {
+          "type": "string",
+          "example": "0123456789"
+        },
+        "timezone": {
+          "type": "string",
+          "example": "Africa/Lagos"
+        },
+        "is_emulator": {
+          "type": "boolean",
+          "example": false
+        }
       }
     },
     "DeviceFingerprintResponse": {
       "type": "object",
       "properties": {
-        "device_id": { "type": "string" },
-        "risk_score": { "type": "number", "example": 62.0 },
-        "risk_level": { "type": "string", "enum": ["low", "medium", "high"], "example": "medium" },
+        "device_id": {
+          "type": "string"
+        },
+        "risk_score": {
+          "type": "number",
+          "example": 62.0
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "example": "medium"
+        },
         "flags": {
           "type": "array",
-          "items": { "type": "string" },
-          "example": ["NEW_DEVICE", "VPN_DETECTED"]
+          "items": {
+            "type": "string"
+          },
+          "example": [
+            "NEW_DEVICE",
+            "VPN_DETECTED"
+          ]
         },
-        "known_device": { "type": "boolean", "example": false },
-        "request_id": { "type": "string" }
+        "known_device": {
+          "type": "boolean",
+          "example": false
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "VelocityCheckRequest": {
-      "required": ["account_number", "event_type"],
+      "required": [
+        "account_number",
+        "event_type"
+      ],
       "type": "object",
       "properties": {
-        "account_number": { "type": "string", "example": "0123456789" },
-        "event_type": { "type": "string", "enum": ["transfer", "login", "card_txn", "bvn_lookup"], "example": "transfer" },
-        "window_minutes": { "type": "integer", "default": 60, "example": 60 },
-        "threshold": { "type": "integer", "default": 5, "description": "Max events before flagging", "example": 5 }
+        "account_number": {
+          "type": "string",
+          "example": "0123456789"
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "transfer",
+            "login",
+            "card_txn",
+            "bvn_lookup"
+          ],
+          "example": "transfer"
+        },
+        "window_minutes": {
+          "type": "integer",
+          "default": 60,
+          "example": 60
+        },
+        "threshold": {
+          "type": "integer",
+          "default": 5,
+          "description": "Max events before flagging",
+          "example": 5
+        }
       }
     },
     "VelocityCheckResponse": {
       "type": "object",
       "properties": {
-        "exceeded": { "type": "boolean", "example": false },
-        "event_count": { "type": "integer", "example": 2 },
-        "threshold": { "type": "integer", "example": 5 },
-        "window_minutes": { "type": "integer", "example": 60 },
-        "request_id": { "type": "string" }
+        "exceeded": {
+          "type": "boolean",
+          "example": false
+        },
+        "event_count": {
+          "type": "integer",
+          "example": 2
+        },
+        "threshold": {
+          "type": "integer",
+          "example": 5
+        },
+        "window_minutes": {
+          "type": "integer",
+          "example": 60
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "FraudReportRequest": {
-      "required": ["reporter_email", "account_number", "fraud_type"],
+      "required": [
+        "reporter_email",
+        "account_number",
+        "fraud_type"
+      ],
       "type": "object",
       "properties": {
-        "reporter_email": { "type": "string", "format": "email", "example": "report@fraudwatch.ng" },
-        "account_number": { "type": "string", "example": "0123456789" },
+        "reporter_email": {
+          "type": "string",
+          "format": "email",
+          "example": "report@fraudwatch.ng"
+        },
+        "account_number": {
+          "type": "string",
+          "example": "0123456789"
+        },
         "fraud_type": {
           "type": "string",
-          "enum": ["phishing", "account_takeover", "sim_swap", "identity_theft", "chargeback", "other"],
+          "enum": [
+            "phishing",
+            "account_takeover",
+            "sim_swap",
+            "identity_theft",
+            "chargeback",
+            "other"
+          ],
           "example": "phishing"
         },
-        "amount_lost": { "type": "number", "example": 50000 },
-        "description": { "type": "string", "example": "User tricked into sending money under false pretenses." },
-        "evidence_urls": { "type": "array", "items": { "type": "string", "format": "uri" } }
+        "amount_lost": {
+          "type": "number",
+          "example": 50000
+        },
+        "description": {
+          "type": "string",
+          "example": "User tricked into sending money under false pretenses."
+        },
+        "evidence_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
       }
     },
     "FraudReportResponse": {
       "type": "object",
       "properties": {
-        "report_id": { "type": "string", "example": "frd_rpt_8x2k9m" },
-        "status": { "type": "string", "enum": ["received", "under_review", "verified"], "example": "received" },
-        "created_at": { "type": "string", "format": "date-time" },
-        "request_id": { "type": "string" }
+        "report_id": {
+          "type": "string",
+          "example": "frd_rpt_8x2k9m"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "received",
+            "under_review",
+            "verified"
+          ],
+          "example": "received"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "FraudAlertsResponse": {
       "type": "object",
       "properties": {
-        "count": { "type": "integer", "example": 42 },
-        "page": { "type": "integer", "example": 1 },
+        "count": {
+          "type": "integer",
+          "example": 42
+        },
+        "page": {
+          "type": "integer",
+          "example": 1
+        },
         "results": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "alert_id": { "type": "string", "example": "alt_9k2m1x" },
-              "account_number": { "type": "string" },
-              "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
-              "type": { "type": "string", "example": "VELOCITY_BREACH" },
-              "message": { "type": "string" },
-              "created_at": { "type": "string", "format": "date-time" }
+              "alert_id": {
+                "type": "string",
+                "example": "alt_9k2m1x"
+              },
+              "account_number": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "example": "VELOCITY_BREACH"
+              },
+              "message": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           }
         }
       }
     },
     "CreditScoreRequest": {
-      "required": ["bvn", "consent_reference"],
+      "required": [
+        "bvn",
+        "consent_reference"
+      ],
       "type": "object",
       "properties": {
-        "bvn": { "type": "string", "example": "22345678901" },
-        "consent_reference": { "type": "string", "description": "Reference to stored customer consent", "example": "cns_abc123" },
-        "bureau": { "type": "string", "enum": ["crc", "firstcentral", "all"], "default": "all" }
+        "bvn": {
+          "type": "string",
+          "example": "22345678901"
+        },
+        "consent_reference": {
+          "type": "string",
+          "description": "Reference to stored customer consent",
+          "example": "cns_abc123"
+        },
+        "bureau": {
+          "type": "string",
+          "enum": [
+            "crc",
+            "firstcentral",
+            "all"
+          ],
+          "default": "all"
+        }
       }
     },
     "CreditScoreResponse": {
       "type": "object",
       "properties": {
-        "bvn": { "type": "string" },
-        "score": { "type": "integer", "description": "300–850 scale", "example": 682 },
-        "rating": { "type": "string", "enum": ["excellent", "good", "fair", "poor", "very_poor"], "example": "good" },
-        "bureau_source": { "type": "string", "example": "crc" },
+        "bvn": {
+          "type": "string"
+        },
+        "score": {
+          "type": "integer",
+          "description": "300\u2013850 scale",
+          "example": 682
+        },
+        "rating": {
+          "type": "string",
+          "enum": [
+            "excellent",
+            "good",
+            "fair",
+            "poor",
+            "very_poor"
+          ],
+          "example": "good"
+        },
+        "bureau_source": {
+          "type": "string",
+          "example": "crc"
+        },
         "factors": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "factor": { "type": "string", "example": "repayment_history" },
-              "impact": { "type": "string", "enum": ["positive", "negative", "neutral"] },
-              "description": { "type": "string" }
+              "factor": {
+                "type": "string",
+                "example": "repayment_history"
+              },
+              "impact": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "description": {
+                "type": "string"
+              }
             }
           }
         },
-        "request_id": { "type": "string" }
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "CreditReportRequest": {
-      "required": ["bvn", "consent_reference"],
+      "required": [
+        "bvn",
+        "consent_reference"
+      ],
       "type": "object",
       "properties": {
-        "bvn": { "type": "string", "example": "22345678901" },
-        "consent_reference": { "type": "string", "example": "cns_abc123" },
-        "include_loans": { "type": "boolean", "default": true },
-        "include_inquiries": { "type": "boolean", "default": true }
+        "bvn": {
+          "type": "string",
+          "example": "22345678901"
+        },
+        "consent_reference": {
+          "type": "string",
+          "example": "cns_abc123"
+        },
+        "include_loans": {
+          "type": "boolean",
+          "default": true
+        },
+        "include_inquiries": {
+          "type": "boolean",
+          "default": true
+        }
       }
     },
     "CreditReportInitResponse": {
       "type": "object",
       "properties": {
-        "report_id": { "type": "string", "example": "crp_8f3k2m9x" },
-        "status": { "type": "string", "enum": ["pending", "processing"], "example": "processing" },
-        "estimated_ready_at": { "type": "string", "format": "date-time" },
-        "request_id": { "type": "string" }
+        "report_id": {
+          "type": "string",
+          "example": "crp_8f3k2m9x"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "processing"
+          ],
+          "example": "processing"
+        },
+        "estimated_ready_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "CreditReport": {
       "type": "object",
       "properties": {
-        "report_id": { "type": "string" },
-        "bvn": { "type": "string" },
-        "score": { "type": "integer", "example": 682 },
-        "rating": { "type": "string", "example": "good" },
-        "generated_at": { "type": "string", "format": "date-time" },
+        "report_id": {
+          "type": "string"
+        },
+        "bvn": {
+          "type": "string"
+        },
+        "score": {
+          "type": "integer",
+          "example": 682
+        },
+        "rating": {
+          "type": "string",
+          "example": "good"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
         "active_loans": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "lender": { "type": "string", "example": "FairMoney" },
-              "amount": { "type": "number", "example": 150000 },
-              "outstanding": { "type": "number", "example": 45000 },
-              "status": { "type": "string", "enum": ["current", "delinquent", "closed"] }
+              "lender": {
+                "type": "string",
+                "example": "FairMoney"
+              },
+              "amount": {
+                "type": "number",
+                "example": 150000
+              },
+              "outstanding": {
+                "type": "number",
+                "example": 45000
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "delinquent",
+                  "closed"
+                ]
+              }
             }
           }
         },
-        "inquiries_last_12m": { "type": "integer", "example": 3 },
-        "delinquencies": { "type": "integer", "example": 0 }
+        "inquiries_last_12m": {
+          "type": "integer",
+          "example": 3
+        },
+        "delinquencies": {
+          "type": "integer",
+          "example": 0
+        }
       }
     },
     "CreditInquiryRequest": {
-      "required": ["bvn", "inquiry_type", "consent_reference", "purpose"],
+      "required": [
+        "bvn",
+        "inquiry_type",
+        "consent_reference",
+        "purpose"
+      ],
       "type": "object",
       "properties": {
-        "bvn": { "type": "string", "example": "22345678901" },
-        "inquiry_type": { "type": "string", "enum": ["soft", "hard"], "example": "soft" },
-        "consent_reference": { "type": "string", "example": "cns_abc123" },
-        "purpose": { "type": "string", "enum": ["loan_application", "account_opening", "periodic_review"], "example": "loan_application" }
+        "bvn": {
+          "type": "string",
+          "example": "22345678901"
+        },
+        "inquiry_type": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "hard"
+          ],
+          "example": "soft"
+        },
+        "consent_reference": {
+          "type": "string",
+          "example": "cns_abc123"
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "loan_application",
+            "account_opening",
+            "periodic_review"
+          ],
+          "example": "loan_application"
+        }
       }
     },
     "CreditInquiryResponse": {
       "type": "object",
       "properties": {
-        "inquiry_id": { "type": "string", "example": "inq_7k2m9x" },
-        "inquiry_type": { "type": "string", "example": "soft" },
-        "recorded_on_bureau": { "type": "boolean", "example": false },
-        "score_at_inquiry": { "type": "integer", "example": 682 },
-        "request_id": { "type": "string" }
+        "inquiry_id": {
+          "type": "string",
+          "example": "inq_7k2m9x"
+        },
+        "inquiry_type": {
+          "type": "string",
+          "example": "soft"
+        },
+        "recorded_on_bureau": {
+          "type": "boolean",
+          "example": false
+        },
+        "score_at_inquiry": {
+          "type": "integer",
+          "example": 682
+        },
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "CreditHistoryResponse": {
       "type": "object",
       "properties": {
-        "bvn": { "type": "string" },
-        "months_analyzed": { "type": "integer", "example": 24 },
-        "total_facilities": { "type": "integer", "example": 4 },
-        "active_facilities": { "type": "integer", "example": 2 },
-        "on_time_payments_pct": { "type": "number", "example": 94.5 },
-        "worst_delinquency_days": { "type": "integer", "example": 0 },
+        "bvn": {
+          "type": "string"
+        },
+        "months_analyzed": {
+          "type": "integer",
+          "example": 24
+        },
+        "total_facilities": {
+          "type": "integer",
+          "example": 4
+        },
+        "active_facilities": {
+          "type": "integer",
+          "example": 2
+        },
+        "on_time_payments_pct": {
+          "type": "number",
+          "example": 94.5
+        },
+        "worst_delinquency_days": {
+          "type": "integer",
+          "example": 0
+        },
         "facilities": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "lender": { "type": "string" },
-              "type": { "type": "string", "enum": ["personal_loan", "mortgage", "credit_card", "overdraft"] },
-              "opened_at": { "type": "string", "format": "date" },
-              "status": { "type": "string", "enum": ["current", "delinquent", "closed"] }
+              "lender": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "personal_loan",
+                  "mortgage",
+                  "credit_card",
+                  "overdraft"
+                ]
+              },
+              "opened_at": {
+                "type": "string",
+                "format": "date"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "delinquent",
+                  "closed"
+                ]
+              }
             }
           }
         },
-        "request_id": { "type": "string" }
+        "request_id": {
+          "type": "string"
+        }
       }
     },
     "ChangePassword": {
-      "required": ["current_password", "new_password"],
+      "required": [
+        "current_password",
+        "new_password"
+      ],
       "type": "object",
       "properties": {
         "current_password": {
@@ -999,7 +2166,10 @@
       }
     },
     "VerifiedTokenObtainPair": {
-      "required": ["email", "password"],
+      "required": [
+        "email",
+        "password"
+      ],
       "type": "object",
       "properties": {
         "email": {
@@ -1030,7 +2200,10 @@
       }
     },
     "User": {
-      "required": ["username", "email"],
+      "required": [
+        "username",
+        "email"
+      ],
       "type": "object",
       "properties": {
         "id": {
@@ -1075,7 +2248,10 @@
         "role": {
           "title": "Role",
           "type": "string",
-          "enum": ["A", "B"]
+          "enum": [
+            "A",
+            "B"
+          ]
         },
         "date_joined": {
           "title": "Date joined",
@@ -1098,7 +2274,11 @@
         "gender": {
           "title": "Gender",
           "type": "string",
-          "enum": ["MALE", "FEMALE", "OTHERS"]
+          "enum": [
+            "MALE",
+            "FEMALE",
+            "OTHERS"
+          ]
         },
         "tier": {
           "title": "Tier",
@@ -1114,7 +2294,9 @@
       }
     },
     "TokenRefresh": {
-      "required": ["refresh"],
+      "required": [
+        "refresh"
+      ],
       "type": "object",
       "properties": {
         "refresh": {
@@ -1131,7 +2313,11 @@
       }
     },
     "WithdrawalAccount": {
-      "required": ["bank_name", "account_number", "account_name"],
+      "required": [
+        "bank_name",
+        "account_number",
+        "account_name"
+      ],
       "type": "object",
       "properties": {
         "id": {
@@ -1185,7 +2371,12 @@
         "currency": {
           "title": "Currency",
           "type": "string",
-          "enum": ["USD", "NGN", "EUR", "GBP"]
+          "enum": [
+            "USD",
+            "NGN",
+            "EUR",
+            "GBP"
+          ]
         },
         "balance": {
           "title": "Balance",
@@ -1260,7 +2451,12 @@
         "currency": {
           "title": "Currency",
           "type": "string",
-          "enum": ["USD", "NGN", "EUR", "GBP"]
+          "enum": [
+            "USD",
+            "NGN",
+            "EUR",
+            "GBP"
+          ]
         },
         "creator": {
           "title": "Creator",
@@ -1269,7 +2465,10 @@
         "creator_role": {
           "title": "Creator role",
           "type": "integer",
-          "enum": [1, 2]
+          "enum": [
+            1,
+            2
+          ]
         },
         "wallet": {
           "$ref": "#/definitions/Wallet"
@@ -1305,7 +2504,13 @@
       }
     },
     "WagerContract": {
-      "required": ["title", "amount", "description", "currency", "creator"],
+      "required": [
+        "title",
+        "amount",
+        "description",
+        "currency",
+        "creator"
+      ],
       "type": "object",
       "properties": {
         "created_on": {
@@ -1329,7 +2534,11 @@
         "status": {
           "title": "Status",
           "type": "string",
-          "enum": ["ACCEPTED", "PROGRESS", "COMPLETED"],
+          "enum": [
+            "ACCEPTED",
+            "PROGRESS",
+            "COMPLETED"
+          ],
           "readOnly": true
         },
         "category": {
@@ -1352,7 +2561,12 @@
         "currency": {
           "title": "Currency",
           "type": "string",
-          "enum": ["USD", "NGN", "EUR", "GBP"]
+          "enum": [
+            "USD",
+            "NGN",
+            "EUR",
+            "GBP"
+          ]
         },
         "creator": {
           "title": "Creator",
@@ -1375,7 +2589,9 @@
       }
     },
     "ClassicContractUpdate": {
-      "required": ["status"],
+      "required": [
+        "status"
+      ],
       "type": "object",
       "properties": {
         "status": {
@@ -1394,23 +2610,36 @@
         "state": {
           "title": "State",
           "type": "string",
-          "enum": ["end", "start"]
+          "enum": [
+            "end",
+            "start"
+          ]
         }
       }
     },
     "WagerContractUpdate": {
-      "required": ["status", "state"],
+      "required": [
+        "status",
+        "state"
+      ],
       "type": "object",
       "properties": {
         "status": {
           "title": "Status",
           "type": "string",
-          "enum": ["ACCEPTED", "PROGRESS", "COMPLETED"]
+          "enum": [
+            "ACCEPTED",
+            "PROGRESS",
+            "COMPLETED"
+          ]
         },
         "state": {
           "title": "State",
           "type": "string",
-          "enum": ["end", "start"]
+          "enum": [
+            "end",
+            "start"
+          ]
         }
       }
     },
@@ -1442,7 +2671,9 @@
       }
     },
     "DisputeMessage": {
-      "required": ["message"],
+      "required": [
+        "message"
+      ],
       "type": "object",
       "properties": {
         "id": {
@@ -1513,7 +2744,9 @@
       }
     },
     "Dispute": {
-      "required": ["contract"],
+      "required": [
+        "contract"
+      ],
       "type": "object",
       "properties": {
         "id": {
@@ -1553,7 +2786,13 @@
         "status": {
           "title": "Status",
           "type": "string",
-          "enum": ["OPEN", "IN_PROGRESS", "ESCALATED", "RESOLVED", "CLOSED"],
+          "enum": [
+            "OPEN",
+            "IN_PROGRESS",
+            "ESCALATED",
+            "RESOLVED",
+            "CLOSED"
+          ],
           "readOnly": true
         },
         "created_at": {
@@ -1624,7 +2863,9 @@
       }
     },
     "DisputeCreate": {
-      "required": ["contract"],
+      "required": [
+        "contract"
+      ],
       "type": "object",
       "properties": {
         "contract": {
@@ -1634,13 +2875,23 @@
         "status": {
           "title": "Status",
           "type": "string",
-          "enum": ["OPEN", "IN_PROGRESS", "ESCALATED", "RESOLVED", "CLOSED"],
+          "enum": [
+            "OPEN",
+            "IN_PROGRESS",
+            "ESCALATED",
+            "RESOLVED",
+            "CLOSED"
+          ],
           "readOnly": true
         }
       }
     },
     "UpdateWallet": {
-      "required": ["amount", "currency", "type"],
+      "required": [
+        "amount",
+        "currency",
+        "type"
+      ],
       "type": "object",
       "properties": {
         "amount": {
@@ -1650,12 +2901,20 @@
         "currency": {
           "title": "Currency",
           "type": "string",
-          "enum": ["USD", "NGN", "EUR", "GBP"]
+          "enum": [
+            "USD",
+            "NGN",
+            "EUR",
+            "GBP"
+          ]
         },
         "type": {
           "title": "Type",
           "type": "string",
-          "enum": ["DEBIT", "CREDIT"]
+          "enum": [
+            "DEBIT",
+            "CREDIT"
+          ]
         }
       }
     }
